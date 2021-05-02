@@ -26,6 +26,7 @@ from dada.dataset.synthia import SYNTHIADataSetDepth
 from dada.model.deeplabv2_depth import get_deeplab_v2_depth
 from dada.domain_adaptation.config import cfg, cfg_from_file
 from dada.domain_adaptation.train_UDA import train_domain_adaptation_with_depth
+from dada.domain_adaptation.train_contrastive import train_domain_adaptation_with_contrastive_loss
 
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore")
@@ -173,6 +174,8 @@ def main():
     # UDA TRAINING
     if cfg.USE_DEPTH:
         train_domain_adaptation_with_depth(model, source_loader, target_loader, cfg)
+    elif cfg.CONTRASTIVE_LEARNING:
+        train_domain_adaptation_with_contrastive_loss(model, source_loader, target_loader, cfg)
     else:
         train_domain_adaptation(model, source_loader, target_loader, cfg)
 

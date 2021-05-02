@@ -33,7 +33,8 @@ cfg.DATA_DIRECTORY_SOURCE = str(project_root / "data/SYNTHIA")
 cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 # Number of object classes
 cfg.NUM_CLASSES = 16
-cfg.USE_DEPTH = True
+cfg.USE_DEPTH = False
+cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
 cfg.EXP_NAME = ""
 cfg.EXP_ROOT = project_root / "experiments"
@@ -55,7 +56,7 @@ cfg.TRAIN.INPUT_SIZE_TARGET = (1024, 512)
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 # Segmentation network params
-cfg.TRAIN.MODEL = "DeepLabv2_depth"
+cfg.TRAIN.MODEL = "DeepLabv2"
 cfg.TRAIN.MULTI_LEVEL = False  # in DADA paper we turn off this feature
 cfg.TRAIN.RESTORE_FROM = ""
 cfg.TRAIN.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
@@ -66,6 +67,7 @@ cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
 cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
+cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.001  # weight of contrastive loss
 # Domain adaptation
 cfg.TRAIN.DA_METHOD = "DADA"
 # Adversarial training params
@@ -88,7 +90,7 @@ cfg.TRAIN.TENSORBOARD_VIZRATE = 100
 cfg.TEST = EasyDict()
 cfg.TEST.MODE = "best"  # {'single', 'best'}
 # model
-cfg.TEST.MODEL = ("DeepLabv2_depth",)
+cfg.TEST.MODEL = ("DeepLabv2",)
 cfg.TEST.MODEL_WEIGHT = (1.0,)
 cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
