@@ -7,7 +7,7 @@ def distance_function(metric='COSIM'):
     if metric == 'COSIM':
         return torch.nn.CosineSimilarity(dim=0)
     elif metric == 'KLDiv':
-        return torch.nn.KLDivLoss
+        return torch.nn.KLDivLoss()
     else:
         print('Undefined distance metric')
 
@@ -26,10 +26,12 @@ def get_pixels_with_cycle_association(features_source, features_target, dis_metr
     """
     find pixels that have cycle associations between them. by default uses distance
     metric as cosine similarity
+
+    returns a list of list containing tuples i, i*, j*
     """
 
     # the list contains all pixels which have cycle association
-    # [[(i_x, i_y), (j_x, j_y)], ....]
+    # [[i, i*, j*], ....]
     pixels_with_cycle_association = []
 
     src_shape = list(features_source.shape)
@@ -98,7 +100,7 @@ def spatial_aggregation(features, alpha=0.5):
                     if k == i and j == l:
                         continue
                     weight = torch.exp(dis(features[i, j, :], features[k, l, :])) * weight_denom
-                    F_2 += weight*features[k, l, :]
+                    F_2 += weight * features[k, l, :]
 
             F_ = features[i, j, :]
             F_hat = (1 - alpha) * F_ + alpha * F_2
@@ -106,11 +108,32 @@ def spatial_aggregation(features, alpha=0.5):
 
 
 def calc_contrastive_loss(final_pred_src, final_pred_trg):
+    """
+        calculate the contrastive association loss
+    """
     pixels_with_cycle_association = get_pixels_with_cycle_association(final_pred_src, final_pred_trg)
+    dis = distance_function(metric='KLDiv')
     loss_cass = 0
 
+    dimX, dimY, dimF = list(final_pred_src.shape)
+
     for association in pixels_with_cycle_association:
-        pass
+        i_x, i_y = association[0]
+        i2_x, i2_y = association[1]
+        j_x, j_y = association[2]
+
+        num = (torch.exp(dis(final_pred_src[i_x, i_y, :], final_pred_trg[j_x, j_y, :])) *
+               torch.exp(dis(final_pred_trg[j_x, j_y, :], final_pred_trg[i2_x, i2_y, :])))
+        den1 = 0
+        den2 = 0
+        for i in range(dimX):
+            for j in range(dimY):
+                if i != j_x and j != j_y:
+                    den1 += torch.exp(dis(final_pred_src[i_x, i_y, :], final_pred_trg[i, j, :]))
+                if i != i2_x and j != i2_y:
+                    den2 += torch.exp(dis(final_pred_src[j_x, j_y, :], final_pred_trg[i, j, :]))
+
+        loss_cass += torch.log(num / (den1 * den2))
 
     loss_cass *= -1 / abs(len(pixels_with_cycle_association))
 
