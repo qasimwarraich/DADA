@@ -12,6 +12,10 @@ def distance_function(metric='COSIM'):
         print('Undefined distance metric')
 
 
+def dis_fn_normalized(x, y, mean, std, dis_f):
+    return (dis_f(x, y) - mean) / std
+
+
 def contrast_normalization_factors(src_feature, trg_feature):
     """
     calculate the mean and variance to normalize distance metric
@@ -31,7 +35,7 @@ def get_pixels_with_cycle_association(features_source, features_target, dis_metr
     """
 
     # the list contains all pixels which have cycle association
-    # [[i, i*, j*], ....]
+    # [[i, j*, i*], ....]
     pixels_with_cycle_association = []
 
     src_shape = list(features_source.shape)
@@ -48,41 +52,58 @@ def get_pixels_with_cycle_association(features_source, features_target, dis_metr
     # then we check for association from trg to src
     # (j_x, j_y) ---> (i*_x, i*_y)
 
-    src_to_trg_associations = []
+    src_to_trg_associations = torch.zeros((src_shape[0], src_shape[1], 2))
+    trg_to_src_associations = torch.zeros((src_shape[0], src_shape[1], 2))
 
-    for i in src_shape[0]:
-        for j in src_shape[1]:
+    # source to target associations
+    for i in range(src_shape[0]):
+        for j in range(src_shape[1]):
             feature_src = features_source[i, j, :]
             max_sim = 0
-            trg_associated_pxl = [-1, -1]
 
-            for k in trg_shape[0]:
-                for l in trg_shape[1]:
+            for k in range(trg_shape[0]):
+                for l in range(trg_shape[1]):
                     feature_trg = features_target[k, l, :]
                     sim = distance_fn(feature_src, feature_trg)
 
                     if sim > max_sim:
-                        trg_associated_pxl = [k, l]
+                        src_to_trg_associations[i, j, 0] = k
+                        src_to_trg_associations[i, j, 1] = l
                         max_sim = sim
-            src_to_trg_associations.append([(i, j), (trg_associated_pxl[0], trg_associated_pxl[1])])
 
-    for src_trg_assoc in src_to_trg_associations:
-        i_x, i_y = src_trg_assoc[0]
-        j_x, j_y = src_trg_assoc[1]
+    # target to source association
+    for i in range(src_shape[0]):
+        for j in range(src_shape[1]):
+            feature_src = features_target[i, j, :]
+            max_sim = 0
 
-        for i in src_shape[0]:
-            for j in src_shape[1]:
-                pass
+            for k in range(trg_shape[0]):
+                for l in range(trg_shape[1]):
+                    feature_trg = features_source[k, l, :]
+                    sim = distance_fn(feature_trg, feature_src)
+
+                    if sim > max_sim:
+                        trg_to_src_associations[i, j, 0] = k
+                        trg_to_src_associations[i, j, 1] = l
+                        max_sim = sim
+
+    # check if source to target and target to source belong to same semantic class
+    for i in range(src_shape[0]):
+        for j in range(src_shape[1]):
+            x, y = src_to_trg_associations[i, j, :]
+            x2, y2 = trg_to_src_associations[x, y, :]
+            if torch.argmax(features_source[i, j, :]) == torch.argmax(features_source[i, j, :]):
+                pixels_with_cycle_association.append([(i, j), (x, y), (x2, y2)])
 
     return pixels_with_cycle_association
 
 
-def spatial_aggregation(features, alpha=0.5):
+def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
     """
     gradient diffusion using spatial aggregation
     """
     dimX, dimY, dimF = list(features.shape)
-    dis = distance_function('COSIM')
+    dis = distance_function(metric)
 
     for i in range(dimX):
         for j in range(dimY):
@@ -106,21 +127,32 @@ def spatial_aggregation(features, alpha=0.5):
             F_hat = (1 - alpha) * F_ + alpha * F_2
             features[i, j, :] = F_hat
 
+    return features
+
 
 def calc_contrastive_loss(final_pred_src, final_pred_trg):
     """
         calculate the contrastive association loss
     """
-    pixels_with_cycle_association = get_pixels_with_cycle_association(final_pred_src, final_pred_trg)
+    # perform spatial aggregation on target before softmax and cycle association
+    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5, metric='KLDiv')
+
+    # perform softmax and get the probablities
+    final_pred_src = F.softmax(final_pred_src, dim=2)
+    final_pred_trg = F.softmax(final_pred_trg, dim=2)
+
+    # get the pixels which have cycle association
+    pixels_with_cycle_association = get_pixels_with_cycle_association(final_pred_src, final_pred_trg, 'KLDiv')
     dis = distance_function(metric='KLDiv')
     loss_cass = 0
 
     dimX, dimY, dimF = list(final_pred_src.shape)
 
+    # calculate the contrastive association loss
     for association in pixels_with_cycle_association:
         i_x, i_y = association[0]
-        i2_x, i2_y = association[1]
-        j_x, j_y = association[2]
+        j_x, j_y = association[1]
+        i2_x, i2_y = association[2]
 
         num = (torch.exp(dis(final_pred_src[i_x, i_y, :], final_pred_trg[j_x, j_y, :])) *
                torch.exp(dis(final_pred_trg[j_x, j_y, :], final_pred_trg[i2_x, i2_y, :])))
