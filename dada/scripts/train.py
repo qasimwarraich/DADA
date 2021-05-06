@@ -172,10 +172,10 @@ def main():
         yaml.dump(cfg, yaml_file, default_flow_style=False)
 
     # UDA TRAINING
-    if cfg.USE_DEPTH:
-        train_domain_adaptation_with_depth(model, source_loader, target_loader, cfg)
-    elif cfg.CONTRASTIVE_LEARNING:
+    if cfg.CONTRASTIVE_LEARNING:
         train_domain_adaptation_with_contrastive_loss(model, source_loader, target_loader, cfg)
+    elif cfg.USE_DEPTH:
+        train_domain_adaptation_with_depth(model, source_loader, target_loader, cfg)
     else:
         train_domain_adaptation(model, source_loader, target_loader, cfg)
 

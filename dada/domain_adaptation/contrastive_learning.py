@@ -55,44 +55,28 @@ def get_pixels_with_cycle_association(features_source, features_target, dis_metr
     src_to_trg_associations = torch.zeros((src_shape[0], src_shape[1], 2))
     trg_to_src_associations = torch.zeros((src_shape[0], src_shape[1], 2))
 
-    # source to target associations
-    for i in range(src_shape[0]):
-        for j in range(src_shape[1]):
-            feature_src = features_source[i, j, :]
-            max_sim = 0
+    dimF, dimX, dimY = src_shape
 
-            for k in range(trg_shape[0]):
-                for l in range(trg_shape[1]):
-                    feature_trg = features_target[k, l, :]
-                    sim = distance_fn(feature_src, feature_trg)
+    for i in range(dimX):
+        for j in range(dimY):
+            # source to target associations
+            feature_src = features_source[:, i, j]
+            d = distance_fn(torch.reshape(feature_src, (16, 1, 1)), features_target)
+            d[i, j] = 0
+            src_to_trg_associations[i, j] = (d == torch.max(d)).nonzero()
 
-                    if sim > max_sim:
-                        src_to_trg_associations[i, j, 0] = k
-                        src_to_trg_associations[i, j, 1] = l
-                        max_sim = sim
-
-    # target to source association
-    for i in range(src_shape[0]):
-        for j in range(src_shape[1]):
-            feature_src = features_target[i, j, :]
-            max_sim = 0
-
-            for k in range(trg_shape[0]):
-                for l in range(trg_shape[1]):
-                    feature_trg = features_source[k, l, :]
-                    sim = distance_fn(feature_trg, feature_src)
-
-                    if sim > max_sim:
-                        trg_to_src_associations[i, j, 0] = k
-                        trg_to_src_associations[i, j, 1] = l
-                        max_sim = sim
+            # trg to src associations
+            feature_trg = features_target[:, i, j]
+            d = distance_fn(torch.reshape(feature_trg, (16, 1, 1)), features_source)
+            d[i, j] = 0
+            trg_to_src_associations[i, j] = (d == torch.max(d)).nonzero()
 
     # check if source to target and target to source belong to same semantic class
     for i in range(src_shape[0]):
         for j in range(src_shape[1]):
-            x, y = src_to_trg_associations[i, j, :]
-            x2, y2 = trg_to_src_associations[x, y, :]
-            if torch.argmax(features_source[i, j, :]) == torch.argmax(features_source[i, j, :]):
+            x, y = list(src_to_trg_associations[i, j, :])
+            x2, y2 = list(trg_to_src_associations[x, y, :])
+            if torch.argmax(features_source[:, i, j]) == torch.argmax(features_source[:, x2, y2]):
                 pixels_with_cycle_association.append([(i, j), (x, y), (x2, y2)])
 
     return pixels_with_cycle_association
@@ -102,30 +86,31 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
     """
     gradient diffusion using spatial aggregation
     """
-    dimX, dimY, dimF = list(features.shape)
+    dimF, dimX, dimY = list(features.shape)
     dis = distance_function(metric)
 
     for i in range(dimX):
         for j in range(dimY):
-            weight_denom = 0
+            d = dis(torch.reshape(features[:, i, j], (16, 1, 1)), features)
+            assert(list(d.shape) == [dimX, dimY])
 
-            for k in range(dimX):
-                for l in range(dimY):
-                    if k == i and j == l:
-                        continue
-                    weight_denom += torch.exp(dis(features[i, j, :], features[k, l, :]))
+            # set distance to itself (same pixel) as 0
+            d[i, j] = 0
 
-            F_2 = 0
-            for k in range(dimX):
-                for l in range(dimY):
-                    if k == i and j == l:
-                        continue
-                    weight = torch.exp(dis(features[i, j, :], features[k, l, :])) * weight_denom
-                    F_2 += weight * features[k, l, :]
+            d_exp = torch.exp(d)
+            d_exp[i, j] = 0
 
-            F_ = features[i, j, :]
+            weight_denom = torch.sum(d_exp)
+            weight = d_exp * weight_denom
+            weight[i, j] = 0
+
+            F_2 = torch.sum(weight*features)
+            F_ = features[:, i, j]
+
+            assert(F_2.shape == F_.shape)
+
             F_hat = (1 - alpha) * F_ + alpha * F_2
-            features[i, j, :] = F_hat
+            features[:, i, j] = F_hat
 
     return features
 
@@ -135,18 +120,18 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg):
         calculate the contrastive association loss
     """
     # perform spatial aggregation on target before softmax and cycle association
-    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5, metric='KLDiv')
+    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
 
     # perform softmax and get the probablities
-    final_pred_src = F.softmax(final_pred_src, dim=2)
-    final_pred_trg = F.softmax(final_pred_trg, dim=2)
+    final_pred_src = F.softmax(final_pred_src, dim=0)
+    final_pred_trg = F.softmax(final_pred_trg, dim=0)
 
     # get the pixels which have cycle association
     pixels_with_cycle_association = get_pixels_with_cycle_association(final_pred_src, final_pred_trg, 'KLDiv')
     dis = distance_function(metric='KLDiv')
     loss_cass = 0
 
-    dimX, dimY, dimF = list(final_pred_src.shape)
+    dimF, dimX, dimY = list(final_pred_src.shape)
 
     # calculate the contrastive association loss
     for association in pixels_with_cycle_association:
@@ -156,14 +141,14 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg):
 
         num = (torch.exp(dis(final_pred_src[i_x, i_y, :], final_pred_trg[j_x, j_y, :])) *
                torch.exp(dis(final_pred_trg[j_x, j_y, :], final_pred_trg[i2_x, i2_y, :])))
-        den1 = 0
-        den2 = 0
-        for i in range(dimX):
-            for j in range(dimY):
-                if i != j_x and j != j_y:
-                    den1 += torch.exp(dis(final_pred_src[i_x, i_y, :], final_pred_trg[i, j, :]))
-                if i != i2_x and j != i2_y:
-                    den2 += torch.exp(dis(final_pred_src[j_x, j_y, :], final_pred_trg[i, j, :]))
+
+        d1 = dis(final_pred_src[:, i_x, i_y], final_pred_trg)
+        d1[j_x, j_y] = 0
+        den1 = torch.sum(torch.exp(d1))
+
+        d2 = dis(final_pred_src[:, j_x, j_y], final_pred_trg)
+        d2[i2_x, i2_y] = 0
+        den2 = torch.sum(torch.exp(d2))
 
         loss_cass += torch.log(num / (den1 * den2))
 
