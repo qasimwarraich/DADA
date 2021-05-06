@@ -50,8 +50,8 @@ cfg.TRAIN.SET_TARGET = "train"
 cfg.TRAIN.BATCH_SIZE_SOURCE = 1
 cfg.TRAIN.BATCH_SIZE_TARGET = 1
 cfg.TRAIN.IGNORE_LABEL = 255
-cfg.TRAIN.INPUT_SIZE_SOURCE = (1280, 760)
-cfg.TRAIN.INPUT_SIZE_TARGET = (1024, 512)
+cfg.TRAIN.INPUT_SIZE_SOURCE = (730, 730)
+cfg.TRAIN.INPUT_SIZE_TARGET = (730, 730)
 # Class info
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
