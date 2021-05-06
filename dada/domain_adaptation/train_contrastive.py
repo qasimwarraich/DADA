@@ -74,19 +74,20 @@ def train_dada(model, trainloader, targetloader, cfg):
 
         # UDA Training
         # train on source
-
         _, batch = trainloader_iter.__next__()
-        images_source, labels, _, _, _ = batch
+        images_source, labels, _, _ = batch
         _, pred_src_main = model(images_source.cuda(device))
-        pred_src_main = interp(pred_src_main)
-        loss_seg_src_main = loss_calc(pred_src_main, labels, device)
+        pred_src_main_interp = interp(pred_src_main)
+        loss_seg_src_main = loss_calc(pred_src_main_interp, labels, device)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
         _, pred_trg_main = model(images.cuda(device))
-        pred_trg_main = interp_target(pred_trg_main)
+        pred_trg_main_interp = interp_target(pred_trg_main)
 
-        loss_contrastive = calc_contrastive_loss(pred_src_main, pred_trg_main)
+        print(pred_trg_main.shape)
+        print(pred_src_main.shape)
+        loss_contrastive = calc_contrastive_loss(pred_src_main[0, :, :, :], pred_trg_main[0, :, :, :])
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE * loss_contrastive)
