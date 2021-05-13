@@ -50,8 +50,8 @@ cfg.TRAIN.SET_TARGET = "train"
 cfg.TRAIN.BATCH_SIZE_SOURCE = 1
 cfg.TRAIN.BATCH_SIZE_TARGET = 1
 cfg.TRAIN.IGNORE_LABEL = 255
-cfg.TRAIN.INPUT_SIZE_SOURCE = (730, 730)
-cfg.TRAIN.INPUT_SIZE_TARGET = (730, 730)
+cfg.TRAIN.INPUT_SIZE_SOURCE = (365, 365)
+cfg.TRAIN.INPUT_SIZE_TARGET = (365, 365)
 # Class info
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
@@ -67,7 +67,7 @@ cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
 cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
-cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.001  # weight of contrastive loss
+cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 1.0  # weight of contrastive loss
 # Domain adaptation
 cfg.TRAIN.DA_METHOD = "DADA"
 # Adversarial training params
@@ -78,13 +78,13 @@ cfg.TRAIN.LAMBDA_ADV_AUX = 0.0002
 cfg.TRAIN.LAMBDA_ENT_MAIN = 0.001
 cfg.TRAIN.LAMBDA_ENT_AUX = 0.0002
 # Other params
-cfg.TRAIN.MAX_ITERS = 90000
-cfg.TRAIN.EARLY_STOP = 90000
-cfg.TRAIN.SAVE_PRED_EVERY = 2000
+cfg.TRAIN.MAX_ITERS = 3000
+cfg.TRAIN.EARLY_STOP = 3000
+cfg.TRAIN.SAVE_PRED_EVERY = 100
 cfg.TRAIN.SNAPSHOT_DIR = ""
 cfg.TRAIN.RANDOM_SEED = 1234
 cfg.TRAIN.TENSORBOARD_LOGDIR = ""
-cfg.TRAIN.TENSORBOARD_VIZRATE = 100
+cfg.TRAIN.TENSORBOARD_VIZRATE = 10
 
 # TEST CONFIGS
 cfg.TEST = EasyDict()
@@ -101,7 +101,7 @@ cfg.TEST.SNAPSHOT_MAXITER = 90000  # used in 'best' mode
 # Test sets
 cfg.TEST.SET_TARGET = "val"
 cfg.TEST.BATCH_SIZE_TARGET = 1
-cfg.TEST.INPUT_SIZE_TARGET = (1024, 512)
+cfg.TEST.INPUT_SIZE_TARGET = (1460, 730)
 cfg.TEST.OUTPUT_SIZE_TARGET = (2048, 1024)
 cfg.TEST.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 cfg.TEST.WAIT_MODEL = True
