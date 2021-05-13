@@ -59,12 +59,12 @@ def train_dada(model, trainloader, targetloader, cfg):
         mode="bilinear",
         align_corners=True,
     )
-    interp_target = nn.Upsample(
-        size=(input_size_target[1], input_size_target[0]),
-        mode="bilinear",
-        align_corners=True,
-    )
-
+    # interp_target = nn.Upsample(
+    #     size=(input_size_target[1], input_size_target[0]),
+    #     mode="bilinear",
+    #     align_corners=True,
+    # )
+    torch.autograd.set_detect_anomaly(True)
     trainloader_iter = enumerate(trainloader)
     targetloader_iter = enumerate(targetloader)
     for i_iter in tqdm(range(cfg.TRAIN.EARLY_STOP + 1)):
@@ -83,14 +83,15 @@ def train_dada(model, trainloader, targetloader, cfg):
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
         _, pred_trg_main = model(images.cuda(device))
-        pred_trg_main_interp = interp_target(pred_trg_main)
+        # pred_trg_main_interp = interp_target(pred_trg_main)
 
-        print(pred_trg_main.shape)
-        print(pred_src_main.shape)
-        loss_contrastive = calc_contrastive_loss(pred_src_main[0, :, :, :], pred_trg_main[0, :, :, :])
+        _, dimF, dimX, dimY = pred_src_main.shape
+        loss_contrastive = calc_contrastive_loss(pred_src_main.reshape((dimF, dimX*dimY)),
+                                                 pred_trg_main.reshape(dimF, dimX*dimY),
+                                                 labels)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
-                + cfg.TRAIN.LAMBDA_CONTRASTIVE * loss_contrastive)
+                + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * loss_contrastive)
         loss.backward()
 
         optimizer.step()
