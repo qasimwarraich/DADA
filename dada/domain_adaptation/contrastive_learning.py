@@ -5,6 +5,14 @@ from torch import linalg as LA
 
 
 def kl_div(p1, p2, dim=2):
+    """
+    @p1 (tensor): n * m where n is number of class and m is number of pixels
+    @p2 (tensor): n * m where n is the number of class and m is number of pixels
+
+    Computes a pairwise KL Divergence loss for each pair of pixel in p1 and p2
+
+    returns (tensor): m * m tensor which (i, j) value is the KL divergence distance of pixel i with pixel j
+    """
     assert(p1.shape == p2.shape)
     z = torch.log(torch.transpose(p1, 0, 1)).unsqueeze(1) - torch.log(torch.transpose(p2, 0, 1))
     return -1*torch.sum(torch.mul(torch.transpose(p1, 0, 1).unsqueeze(0), z), dim=dim)
@@ -12,7 +20,12 @@ def kl_div(p1, p2, dim=2):
 
 def cosine_sim(x, y):
     """
-    performs pairwise cosine similarity
+    @x (tensor): n * m where n is number of class and m is number of pixels
+    @y (tensor): n * m where n is the number of class and m is number of pixels
+
+    Computes a pairwise Cosine Similarity for each pair of pixel in x and y
+
+    returns (tensor): m * m tensor which (i, j) value is the cosine similarity of pixel i with pixel j
     """
 
     dimX, dimY = list(x.shape)
@@ -34,6 +47,12 @@ def cosine_sim(x, y):
 
 
 def distance_function(metric='COSIM'):
+    """
+    @metric (str): name of the distance function
+
+    returns (func): corresponding distance function
+    """
+
     if metric == 'COSIM':
         return cosine_sim
     elif metric == 'KLDiv':
@@ -44,7 +63,14 @@ def distance_function(metric='COSIM'):
 
 def contrast_normalization_factors(dis):
     """
-    calculate the mean and variance to normalize distance values
+    @dis (tensor): m * m tensor which contains the distance values for pair of pixels
+
+    Computes mean and standard deviation for each pixel distance values with every other value. It is used
+    to do contrast normalization on the distance values
+
+    returns:
+        @mean (tensor): m * 1 tensor, the mean value of similarities for each of m pixels
+        @std  (tensor): m * 1 tensor, the standard deviation of similarities for each of m pixels
     """
 
     dimX, dimY = list(dis.shape)
@@ -58,10 +84,19 @@ def contrast_normalization_factors(dis):
 
 def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
     """
+    @dis_src_to_trg (tensor): n * n, distance between every pair of pixel from source to target
+    @dis_trg_to_src (tensor): n * n, distance between every pair of pixel from target to source
+    @label (tensor): the true class labels for source pixels
+
     find pixels that have cycle associations between them. by default uses distance
     metric as cosine similarity
 
-    returns a list of list containing tuples i, i*, j*
+    returns:
+        @pixels_with_cycle_association (list of tuples): tuple of pixel which have cycle consistency
+            i.e one element of the list can be (i, j, i*)
+            i  --> is any pixel in source
+            j  --> is a pixel in target with which i has maximum similarity
+            i* --> is a pixel in source with which j has maximum similarity
     """
 
     # the list contains all pixels which have cycle association
@@ -96,8 +131,16 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
 
 def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
     """
+    @features (tensor): c*n where c is number of class and n is number of pixel
+    @alpha (float): constant that controls the ratio of aggregated features
+    @metric (str): the name of distance function to use
+
     gradient diffusion using spatial aggregation
+
+    returns:
+        @features (tensor): spatial aggregated tensor
     """
+
     dimX, dimY = list(features.shape)
     dis = distance_function(metric)
 
@@ -118,6 +161,16 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
 
 def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
+    """
+    @src_feature (tensor): c*n where c is the number of class and n is number of pixel
+    @trg_feature (tensor): c*n where c is the number of class and n is number of pixel
+    @labels (tensor): class labels for source feature
+    @dis_fn (func): distance function to use to establish cycle associations
+
+    returns:
+        @loss (float): the association loss
+    """
+
     loss = 0
 
     # calculate the pixel wise distance
@@ -154,13 +207,27 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
 
 
 def calc_label_smooth_regularization(src_feature, trg_feature):
+    """
+    @src_feature (tensor):
+    @trg_feature (tensor):
+    """
     pass
 
 
 def calc_contrastive_loss(final_pred_src, final_pred_trg, labels):
     """
-        calculate the contrastive association loss
+    @final_pred_src (tensor): c*n, the final prediction feature for source
+    @final_pred_trg (tensor): c*n, the final prediction feature for target
+    @labels (tensor): the true label for source
+
+
+    returns:
+        @loss (float): the association loss
+            consists of lcass and lfass
+            lcass: association loss on final prediction probabilities
+            lfass: association loss on final feature prediction
     """
+    
     # perform spatial aggregation on target before softmax and cycle association
     final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
     assert(final_pred_trg.shape == final_pred_src.shape)
