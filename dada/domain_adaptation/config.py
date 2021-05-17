@@ -33,7 +33,7 @@ cfg.DATA_DIRECTORY_SOURCE = str(project_root / "data/SYNTHIA")
 cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 # Number of object classes
 cfg.NUM_CLASSES = 16
-cfg.USE_DEPTH = True
+cfg.USE_DEPTH = False
 # Exp dirs
 cfg.EXP_NAME = ""
 cfg.EXP_ROOT = project_root / "experiments"
@@ -49,13 +49,13 @@ cfg.TRAIN.SET_TARGET = "train"
 cfg.TRAIN.BATCH_SIZE_SOURCE = 1
 cfg.TRAIN.BATCH_SIZE_TARGET = 1
 cfg.TRAIN.IGNORE_LABEL = 255
-cfg.TRAIN.INPUT_SIZE_SOURCE = (1280, 760)
-cfg.TRAIN.INPUT_SIZE_TARGET = (1024, 512)
+cfg.TRAIN.INPUT_SIZE_SOURCE = (365, 365)
+cfg.TRAIN.INPUT_SIZE_TARGET = (365, 365)
 # Class info
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 # Segmentation network params
-cfg.TRAIN.MODEL = "DeepLabv2_depth"
+cfg.TRAIN.MODEL = "DeepLabv2"
 cfg.TRAIN.MULTI_LEVEL = False  # in DADA paper we turn off this feature
 cfg.TRAIN.RESTORE_FROM = ""
 cfg.TRAIN.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
@@ -88,7 +88,7 @@ cfg.TRAIN.TENSORBOARD_VIZRATE = 100
 cfg.TEST = EasyDict()
 cfg.TEST.MODE = "best"  # {'single', 'best'}
 # model
-cfg.TEST.MODEL = ("DeepLabv2_depth",)
+cfg.TEST.MODEL = ("DeepLabv2",)
 cfg.TEST.MODEL_WEIGHT = (1.0,)
 cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
