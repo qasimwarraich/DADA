@@ -18,6 +18,7 @@ from advent.dataset.cityscapes import CityscapesDataSet
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.domain_adaptation.config import cfg, cfg_from_file
 from dada.model.deeplabv2_depth import get_deeplab_v2_depth
+from evaluate_contrastive_learning import evaluate_contrastive_learning
 
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore")
@@ -93,7 +94,10 @@ def main(config_file, exp_suffix):
         pin_memory=True,
     )
     # eval
-    evaluate_domain_adaptation(models, test_loader, cfg, fixed_test_size=fixed_test_size)
+    if cfg.CONTRASTIVE_LEARNING:
+        evaluate_contrastive_learning(models, test_loader, cfg, fixed_test_size=fixed_test_size)
+    else:
+        evaluate_domain_adaptation(models, test_loader, cfg, fixed_test_size=fixed_test_size)
 
 
 if __name__ == "__main__":

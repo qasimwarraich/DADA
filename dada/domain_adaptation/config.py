@@ -36,7 +36,7 @@ cfg.NUM_CLASSES = 16
 cfg.USE_DEPTH = False
 cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
-cfg.EXP_NAME = ""
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Lcass"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
@@ -67,7 +67,7 @@ cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
 cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
-cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 1.0  # weight of contrastive loss
+cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.1  # weight of contrastive loss
 # Domain adaptation
 cfg.TRAIN.DA_METHOD = "DADA"
 # Adversarial training params
@@ -96,12 +96,12 @@ cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
 cfg.TEST.RESTORE_FROM = ("",)
 cfg.TEST.SNAPSHOT_DIR = ("",)  # used in 'best' mode
-cfg.TEST.SNAPSHOT_STEP = 2000  # used in 'best' mode
-cfg.TEST.SNAPSHOT_MAXITER = 90000  # used in 'best' mode
+cfg.TEST.SNAPSHOT_STEP = 100  # used in 'best' mode
+cfg.TEST.SNAPSHOT_MAXITER = 3000  # used in 'best' mode
 # Test sets
 cfg.TEST.SET_TARGET = "val"
 cfg.TEST.BATCH_SIZE_TARGET = 1
-cfg.TEST.INPUT_SIZE_TARGET = (1460, 730)
+cfg.TEST.INPUT_SIZE_TARGET = (365, 365)
 cfg.TEST.OUTPUT_SIZE_TARGET = (2048, 1024)
 cfg.TEST.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 cfg.TEST.WAIT_MODEL = True
