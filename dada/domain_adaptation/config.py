@@ -1,8 +1,6 @@
 # --------------------------------------------------------
-# Configurations for domain adaptation
-# Copyright (c) 2019 valeo.ai
+# Configurations for Low Resolution (365x365) Baseline w/o Depth
 #
-# Written by Tuan-Hung Vu
 # Adapted from https://github.com/rbgirshick/py-faster-rcnn/blob/master/lib/fast_rcnn/config.py
 # --------------------------------------------------------
 
@@ -65,7 +63,7 @@ cfg.TRAIN.WEIGHT_DECAY = 0.0005
 cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
-cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
+cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.0  # weight of depth regression
 # Domain adaptation
 cfg.TRAIN.DA_METHOD = "DADA"
 # Adversarial training params
