@@ -5,9 +5,7 @@ DATA_DIRECTORY_TARGET: ../../data/Cityscapes
 EXP_NAME: SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline
 NUM_WORKERS: 4
 USE_DEPTH: False
-TRAIN:
-  DA_METHOD: DADA
-  MODEL: DeepLabv2
-  RESTORE_FROM: ../../pretrained_models/DeepLab_resnet_pretrained_imagenet.pth
 TEST:
   MODE: best
+  RESTORE_FROM: ../../experiments/snapshots/SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline/model_90000.pth
+    #    ../../pretrained_models/DeepLab_resnet_pretrained_imagenet.pth

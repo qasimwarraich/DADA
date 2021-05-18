@@ -33,7 +33,7 @@ cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 cfg.NUM_CLASSES = 16
 cfg.USE_DEPTH = False
 # Exp dirs
-cfg.EXP_NAME = ""
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
@@ -97,7 +97,7 @@ cfg.TEST.SNAPSHOT_MAXITER = 90000  # used in 'best' mode
 # Test sets
 cfg.TEST.SET_TARGET = "val"
 cfg.TEST.BATCH_SIZE_TARGET = 1
-cfg.TEST.INPUT_SIZE_TARGET = (1024, 512)
+cfg.TEST.INPUT_SIZE_TARGET = (365, 365)
 cfg.TEST.OUTPUT_SIZE_TARGET = (2048, 1024)
 cfg.TEST.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 cfg.TEST.WAIT_MODEL = True
