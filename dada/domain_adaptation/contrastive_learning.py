@@ -14,8 +14,9 @@ def kl_div(p1, p2, dim=2):
     returns (tensor): m * m tensor which (i, j) value is the KL divergence distance of pixel i with pixel j
     """
     assert(p1.shape == p2.shape)
-    z = torch.log(torch.transpose(p1, 0, 1)).unsqueeze(1) - torch.log(torch.transpose(p2, 0, 1))
-    return -1*torch.sum(torch.mul(torch.transpose(p1, 0, 1).unsqueeze(0), z), dim=dim)
+    eps = 1e-7
+    z = torch.log(torch.transpose(p1, 0, 1) + eps).unsqueeze(1) - torch.log(torch.transpose(p2, 0, 1) + eps)
+    return -1*torch.sum(torch.mul(torch.transpose(p1, 0, 1).unsqueeze(1), z), dim=dim)
 
 
 def cosine_sim(x, y):
@@ -194,12 +195,10 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     for association in pixels_with_cycle_association:
         i, j, i2 = association
 
-        num = d1[i, j] * d2[j, i2]
-
         den1 = torch.sum(d1[i, :]) - d1[i, j]
         den2 = torch.sum(d2[j, :]) - d2[j, i2]
 
-        loss += torch.log(num / (den1 * den2))
+        loss += torch.log((d1[i, j] / den1) * (d2[j, i2] / den2))
 
     loss *= -1 / abs(len(pixels_with_cycle_association))
 
@@ -227,7 +226,7 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg, labels):
             lcass: association loss on final prediction probabilities
             lfass: association loss on final feature prediction
     """
-    
+
     # perform spatial aggregation on target before softmax and cycle association
     final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
     assert(final_pred_trg.shape == final_pred_src.shape)
