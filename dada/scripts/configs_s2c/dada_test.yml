@@ -7,5 +7,4 @@ NUM_WORKERS: 4
 USE_DEPTH: False
 TEST:
   MODE: best
-  RESTORE_FROM: ../../experiments/snapshots/SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline/model_90000.pth
-    #    ../../pretrained_models/DeepLab_resnet_pretrained_imagenet.pth
+  RESTORE_FROM: ../../pretrained_models/DeepLab_resnet_pretrained_imagenet.pth
