@@ -99,10 +99,9 @@ def train_dada(model, trainloader, targetloader, cfg):
         _, pred_src_main, pred_depth_src_main = model(images_source.cuda(device))
         pred_src_main = interp(pred_src_main)
         pred_depth_src_main = interp(pred_depth_src_main)
-        loss_depth_src_main = loss_calc_depth(pred_depth_src_main, depth, device)
+        # loss_depth_src_main = loss_calc_depth(pred_depth_src_main, depth, device)
         loss_seg_src_main = loss_calc(pred_src_main, labels, device)
-        loss = ( cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
-                + cfg.TRAIN.LAMBDA_DEPTH_MAIN * loss_depth_src_main)
+        loss = ( cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main )
         loss.backward()
 
         # adversarial training ot fool the discriminator
@@ -111,7 +110,7 @@ def train_dada(model, trainloader, targetloader, cfg):
         _, pred_trg_main, pred_depth_trg_main = model(images.cuda(device))
         pred_trg_main = interp_target(pred_trg_main)
         pred_depth_trg_main = interp_target(pred_depth_trg_main)
-        d_out_main = d_main(prob_2_entropy(F.softmax(pred_trg_main)) * pred_depth_trg_main)
+        d_out_main = d_main(prob_2_entropy(F.softmax(pred_trg_main)))
         loss_adv_trg_main = bce_loss(d_out_main, source_label)
         loss = cfg.TRAIN.LAMBDA_ADV_MAIN * loss_adv_trg_main
         loss.backward()
@@ -123,7 +122,7 @@ def train_dada(model, trainloader, targetloader, cfg):
         # train with source
         pred_src_main = pred_src_main.detach()
         pred_depth_src_main = pred_depth_src_main.detach()
-        d_out_main = d_main(prob_2_entropy(F.softmax(pred_src_main)) * pred_depth_src_main)
+        d_out_main = d_main(prob_2_entropy(F.softmax(pred_src_main)))
         loss_d_main = bce_loss(d_out_main, source_label)
         loss_d_main = loss_d_main
         loss_d_main.backward()
@@ -131,7 +130,7 @@ def train_dada(model, trainloader, targetloader, cfg):
         # train with target
         pred_trg_main = pred_trg_main.detach()
         pred_depth_trg_main = pred_depth_trg_main.detach()
-        d_out_main = d_main(prob_2_entropy(F.softmax(pred_trg_main)) * pred_depth_trg_main)
+        d_out_main = d_main(prob_2_entropy(F.softmax(pred_trg_main)))
         loss_d_main = bce_loss(d_out_main, target_label)
         loss_d_main = loss_d_main
         loss_d_main.backward()
@@ -141,7 +140,7 @@ def train_dada(model, trainloader, targetloader, cfg):
 
         current_losses = {
             "loss_seg_src_main": loss_seg_src_main,
-            "loss_depth_src_main": loss_depth_src_main,
+            # "loss_depth_src_main": loss_depth_src_main,
             "loss_adv_trg_main": loss_adv_trg_main,
             "loss_d_main": loss_d_main,
         }
