@@ -4,7 +4,8 @@ DATA_DIRECTORY_SOURCE: ../../../../datasets/Synthia/RAND_CITYSCAPES
 DATA_DIRECTORY_TARGET: ../../data/Cityscapes
 EXP_NAME: SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline
 NUM_WORKERS: 4
-USE_DEPTH: False
+USE_DEPTH: True
 TEST:
-  MODE: best
-  RESTORE_FROM: ../../pretrained_models/DeepLab_resnet_pretrained_imagenet.pth
+  MODE: single
+  RESTORE_FROM: 
+        - ../../experiments/snapshots/SYNTHIA2Cityscapes_DeepLabv2_DADA_LowRes_Baseline/model_90000.pth

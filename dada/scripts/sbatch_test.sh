@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH  --output=baseline_log/%j.log
+#SBATCH  --output=baselinetest_log/%j.log
 #SBATCH  --gres=gpu:1
 #SBATCH  --mem=30G
 

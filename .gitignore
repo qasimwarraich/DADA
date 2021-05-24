@@ -1,7 +1,10 @@
 # Added by Qas
+/dada/scripts/baseline_log
+/dada/scripts/baselinetest_log
 /data
 /pretrained_models
 /experiments
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
