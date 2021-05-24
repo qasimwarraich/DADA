@@ -53,7 +53,7 @@ cfg.TRAIN.INPUT_SIZE_TARGET = (365, 365)
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 # Segmentation network params
-cfg.TRAIN.MODEL = "DeepLabv2"
+cfg.TRAIN.MODEL = "DeepLabv2_depth"
 cfg.TRAIN.MULTI_LEVEL = False  # in DADA paper we turn off this feature
 cfg.TRAIN.RESTORE_FROM = ""
 cfg.TRAIN.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
@@ -86,7 +86,7 @@ cfg.TRAIN.TENSORBOARD_VIZRATE = 100
 cfg.TEST = EasyDict()
 cfg.TEST.MODE = "best"  # {'single', 'best'}
 # model
-cfg.TEST.MODEL = ("DeepLabv2",)
+cfg.TEST.MODEL = ("DeepLabv2_depth",)
 cfg.TEST.MODEL_WEIGHT = (1.0,)
 cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
