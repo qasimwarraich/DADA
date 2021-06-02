@@ -67,7 +67,7 @@ cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
 cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
-cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.1  # weight of contrastive loss
+cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.01  # weight of contrastive loss
 # Domain adaptation
 cfg.TRAIN.DA_METHOD = "DADA"
 # Adversarial training params
