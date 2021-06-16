@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch import linalg as LA
+import time
 
 
 def kl_div(p1, p2, dim=2):
@@ -29,22 +30,12 @@ def cosine_sim(x, y):
     returns (tensor): m * m tensor which (i, j) value is the cosine similarity of pixel i with pixel j
     """
 
-    dimX, dimY = list(x.shape)
-
     assert(x.shape == y.shape)
 
-    x_norm = LA.norm(x, 2, dim=0)
-    y_norm = LA.norm(y, 2, dim=0)
-    x1 = x / x_norm
-    y1 = y / y_norm
+    x1 = F.normalize(x, p=2, dim=1)
+    y1 = F.normalize(x, p=2, dim=1)
 
-    x1 = torch.reshape(x1, (dimX, dimY, 1))
-    y1 = torch.reshape(y1, (dimX, 1, dimY))
-
-    cosim = torch.bmm(x1, y1)
-    cosim = torch.sum(cosim, dim=0)
-
-    return cosim
+    return torch.mm(x1, y1.t())
 
 
 def distance_function(metric='COSIM'):
@@ -76,9 +67,9 @@ def contrast_normalization_factors(dis):
 
     dimX, dimY = list(dis.shape)
 
-    mean = (1 / dimX) * (torch.sum(dis, dim=1) - torch.diag(dis))
+    mean = (1 / dimX) * torch.sum(dis, dim=1)
 
-    std = torch.sqrt((1/(dimX - 1)) * torch.sum(torch.square(dis - mean)) - torch.square(torch.diag(dis) - mean))
+    std = torch.sqrt((1/(dimX - 1)) * torch.sum(torch.square(dis - mean), dim=1))
 
     return mean, std
 
@@ -142,21 +133,17 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
         @features (tensor): spatial aggregated tensor
     """
 
-    dimX, dimY = list(features.shape)
     dis = distance_function(metric)
 
     d = dis(features, features)
     u, sig = contrast_normalization_factors(d)
     d = (d - u) / sig
-    d = torch.exp(d)
 
-    weight_denom = torch.sum(d, dim=1) - torch.diag(d)
+    weight = F.softmax(d, dim=1)
 
-    weight = d / weight_denom
+    diag_weight = torch.diagonal(weight)
 
-    weight.fill_diagonal_(0)
-
-    features = (1-alpha)*features + alpha*torch.transpose(torch.mm(weight, torch.transpose(features, 0, 1)), 0, 1)
+    features = (1-alpha)*features + alpha*(torch.mm(weight, features) - torch.matmul(diag_weight, features))
 
     return features
 
@@ -172,11 +159,12 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
         @loss (float): the association loss
     """
 
-    loss = 0
-
     # calculate the pixel wise distance
     d1 = dis_fn(src_feature, trg_feature)
-    d2 = dis_fn(src_feature, trg_feature)
+    d2 = dis_fn(trg_feature, src_feature)
+
+    # get the pixels which have cycle association
+    pixels_with_cycle_association = get_pixels_with_cycle_association(d1, d2, labels)
 
     # contrast normalize the distance values
     u, sig = contrast_normalization_factors(d1)
@@ -185,35 +173,43 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     d1 = (d1 - u) / sig
     d2 = (d2 - u2) / sig2
 
-    # get the pixels which have cycle association
-    pixels_with_cycle_association = get_pixels_with_cycle_association(d1, d2, labels)
+    d1softmax = F.softmax(d1, dim=1)
+    d2softmax = F.softmax(d2, dim=1)
 
-    d1 = torch.exp(d1)
-    d2 = torch.exp(d2)
+    I = []
+    J = []
+    I_2 = []
 
-    # calculate the contrastive association loss
     for association in pixels_with_cycle_association:
-        i, j, i2 = association
+        i, j, i_2 = association
+        I.append(i)
+        J.append(j)
+        I_2.append(i_2)
 
-        den1 = torch.sum(d1[i, :]) - d1[i, j]
-        den2 = torch.sum(d2[j, :]) - d2[j, i2]
-
-        loss += torch.log((d1[i, j] / den1) * (d2[j, i2] / den2))
+    loss = torch.sum(torch.log(d1softmax[I, J] * d2softmax[J, I_2]))
 
     loss *= -1 / abs(len(pixels_with_cycle_association))
 
     return loss
 
 
-def calc_label_smooth_regularization(src_feature, trg_feature):
+def calc_lovasz_softmax_loss(src_feature, trg_feature):
     """
-    @src_feature (tensor):
-    @trg_feature (tensor):
+    **TODO**
     """
     pass
 
 
-def calc_contrastive_loss(final_pred_src, final_pred_trg, labels):
+def calc_label_smooth_regularization(src_feature, trg_feature):
+    """
+    @src_feature (tensor):
+    @trg_feature (tensor):
+    **TODO**
+    """
+    pass
+
+
+def calc_contrastive_loss(final_pred_src, final_pred_trg, labels, lcass=False):
     """
     @final_pred_src (tensor): c*n, the final prediction feature for source
     @final_pred_trg (tensor): c*n, the final prediction feature for target
@@ -231,14 +227,17 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg, labels):
     final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
     assert(final_pred_trg.shape == final_pred_src.shape)
 
-    # cosine_dis = distance_function(metric='COSIM')
-    # loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis)
+    cosine_dis = distance_function(metric='COSIM')
+    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis)
 
-    # perform softmax and get the probablities
-    final_pred_src = F.softmax(final_pred_src, dim=0)
-    final_pred_trg = F.softmax(final_pred_trg, dim=0)
+    if lcass:
+        # perform softmax and get the probablities
+        final_pred_src = F.softmax(final_pred_src, dim=1)
+        final_pred_trg = F.softmax(final_pred_trg, dim=1)
 
-    kl_div_dis = distance_function(metric='KLDiv')
-    loss_cass = calc_association_loss(final_pred_src, final_pred_trg, labels, kl_div_dis)
+        kl_div_dis = distance_function(metric='KLDiv')
+        loss_cass = calc_association_loss(final_pred_src, final_pred_trg, labels, kl_div_dis)
 
-    return loss_cass
+        return loss_fass, loss_cass
+
+    return loss_fass

@@ -26,7 +26,7 @@ from dada.utils.viz_segmask import colorize_mask
 from dada.domain_adaptation.contrastive_learning import calc_contrastive_loss
 
 
-def train_dada(model, trainloader, targetloader, cfg):
+def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
     """ Contrastive training with dada
     """
     # Create the model and start the training.
@@ -67,7 +67,12 @@ def train_dada(model, trainloader, targetloader, cfg):
     torch.autograd.set_detect_anomaly(True)
     trainloader_iter = enumerate(trainloader)
     targetloader_iter = enumerate(targetloader)
-    for i_iter in tqdm(range(cfg.TRAIN.EARLY_STOP + 1)):
+
+    for i_iter in range(start_iter):
+        _, _ = trainloader_iter.__next__()
+        _, _ = targetloader_iter.__next__()
+
+    for i_iter in tqdm(range(start_iter, cfg.TRAIN.EARLY_STOP + 1 + start_iter), initial=start_iter):
         # reset optimizers
         optimizer.zero_grad()
         adjust_learning_rate(optimizer, i_iter, cfg)
@@ -75,30 +80,30 @@ def train_dada(model, trainloader, targetloader, cfg):
         # UDA Training
         # train on source
         _, batch = trainloader_iter.__next__()
-        images_source, labels, _, _ = batch
-        _, pred_src_main = model(images_source.cuda(device))
+        images_source, labels, _, _, _ = batch
+        _, pred_src_main, _, last_feature_map_src = model(images_source.cuda(device))
         pred_src_main_interp = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main_interp, labels, device)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
-        _, pred_trg_main = model(images.cuda(device))
+        _, pred_trg_main, _, last_feature_map_trg = model(images.cuda(device))
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
-        _, dimF, dimX, dimY = pred_src_main.shape
-        loss_contrastive = calc_contrastive_loss(pred_src_main.reshape((dimF, dimX*dimY)),
-                                                 pred_trg_main.reshape(dimF, dimX*dimY),
-                                                 labels)
+        _, dimF, dimX, dimY = last_feature_map_src.shape
+        lfass = calc_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
+                                      last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
+                                      labels, lcass=False)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
-                + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * loss_contrastive)
+                + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
         loss.backward()
 
         optimizer.step()
 
         current_losses = {
             "loss_seg_src_main": loss_seg_src_main,
-            "loss_contrastive_src_main": loss_contrastive
+            "loss_lfass_src_main": lfass
         }
         print_losses(current_losses, i_iter)
 
@@ -106,7 +111,7 @@ def train_dada(model, trainloader, targetloader, cfg):
             print("taking snapshot ...")
             print("exp =", cfg.TRAIN.SNAPSHOT_DIR)
             snapshot_dir = Path(cfg.TRAIN.SNAPSHOT_DIR)
-            torch.save(model.state_dict(), snapshot_dir / f"model_{i_iter}.pth")
+            torch.save({'state_dict': model.state_dict(), 'iter': i_iter}, snapshot_dir / f"model_{i_iter}.pth")
             if i_iter >= cfg.TRAIN.EARLY_STOP - 1:
                 break
         sys.stdout.flush()
@@ -135,6 +140,6 @@ def draw_in_tensorboard(writer, images, i_iter, pred_main, num_classes, type_):
     writer.add_image(f"Prediction - {type_}", grid_image, i_iter)
 
 
-def train_domain_adaptation_with_contrastive_loss(model, trainloader, targetloader, cfg):
+def train_domain_adaptation_with_contrastive_loss(model, trainloader, targetloader, cfg, start_iter=0):
     assert cfg.TRAIN.DA_METHOD in {"DADA"}, "Not yet supported DA method {}".format(cfg.TRAIN.DA_METHOD)
-    train_dada(model, trainloader, targetloader, cfg)
+    train_dada(model, trainloader, targetloader, cfg, start_iter)
