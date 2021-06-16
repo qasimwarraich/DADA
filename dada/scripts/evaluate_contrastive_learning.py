@@ -141,7 +141,7 @@ def eval_best(cfg, models,
 
 def load_checkpoint_for_evaluation(model, checkpoint, device):
     saved_state_dict = torch.load(checkpoint)
-    model.load_state_dict(saved_state_dict)
+    model.load_state_dict(saved_state_dict['state_dict'])
     model.eval()
     model.cuda(device)
 
