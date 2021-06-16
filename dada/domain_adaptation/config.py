@@ -33,10 +33,10 @@ cfg.DATA_DIRECTORY_SOURCE = str(project_root / "data/SYNTHIA")
 cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 # Number of object classes
 cfg.NUM_CLASSES = 16
-cfg.USE_DEPTH = False
+cfg.USE_DEPTH = True
 cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
-cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Lcass"
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Lfass2"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
@@ -56,7 +56,7 @@ cfg.TRAIN.INPUT_SIZE_TARGET = (365, 365)
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 # Segmentation network params
-cfg.TRAIN.MODEL = "DeepLabv2"
+cfg.TRAIN.MODEL = "DeepLabv2_depth"
 cfg.TRAIN.MULTI_LEVEL = False  # in DADA paper we turn off this feature
 cfg.TRAIN.RESTORE_FROM = ""
 cfg.TRAIN.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
@@ -78,9 +78,9 @@ cfg.TRAIN.LAMBDA_ADV_AUX = 0.0002
 cfg.TRAIN.LAMBDA_ENT_MAIN = 0.001
 cfg.TRAIN.LAMBDA_ENT_AUX = 0.0002
 # Other params
-cfg.TRAIN.MAX_ITERS = 3000
-cfg.TRAIN.EARLY_STOP = 3000
-cfg.TRAIN.SAVE_PRED_EVERY = 100
+cfg.TRAIN.MAX_ITERS = 30000
+cfg.TRAIN.EARLY_STOP = 30000
+cfg.TRAIN.SAVE_PRED_EVERY = 1000
 cfg.TRAIN.SNAPSHOT_DIR = ""
 cfg.TRAIN.RANDOM_SEED = 1234
 cfg.TRAIN.TENSORBOARD_LOGDIR = ""
@@ -90,7 +90,7 @@ cfg.TRAIN.TENSORBOARD_VIZRATE = 10
 cfg.TEST = EasyDict()
 cfg.TEST.MODE = "best"  # {'single', 'best'}
 # model
-cfg.TEST.MODEL = ("DeepLabv2",)
+cfg.TEST.MODEL = ("DeepLabv2_depth",)
 cfg.TEST.MODEL_WEIGHT = (1.0,)
 cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
