@@ -78,6 +78,7 @@ def main():
     if os.environ.get("DADA_DRY_RUN", "0") == "1":
         return
 
+    start_iter = 0
     # LOAD SEGMENTATION NET
     assert osp.exists(
         cfg.TRAIN.RESTORE_FROM
@@ -96,7 +97,8 @@ def main():
                     new_params[".".join(i_parts[1:])] = saved_state_dict[i]
             model.load_state_dict(new_params)
         else:
-            model.load_state_dict(saved_state_dict)
+            start_iter = saved_state_dict['iter']
+            model.load_state_dict(saved_state_dict['state_dict'])
     elif cfg.TRAIN.MODEL == "DeepLabv2":
         model = get_deeplab_v2(
             num_classes=cfg.NUM_CLASSES,
@@ -111,7 +113,8 @@ def main():
                     new_params[".".join(i_parts[1:])] = saved_state_dict[i]
             model.load_state_dict(new_params)
         else:
-            model.load_state_dict(saved_state_dict)
+            start_iter = saved_state_dict['iter']
+            model.load_state_dict(saved_state_dict['state_dict'])
     else:
         raise NotImplementedError(f"Not yet supported {cfg.TRAIN.MODEL}")
     print("Model loaded")
@@ -173,7 +176,7 @@ def main():
 
     # UDA TRAINING
     if cfg.CONTRASTIVE_LEARNING:
-        train_domain_adaptation_with_contrastive_loss(model, source_loader, target_loader, cfg)
+        train_domain_adaptation_with_contrastive_loss(model, source_loader, target_loader, cfg, start_iter)
     elif cfg.USE_DEPTH:
         train_domain_adaptation_with_depth(model, source_loader, target_loader, cfg)
     else:
