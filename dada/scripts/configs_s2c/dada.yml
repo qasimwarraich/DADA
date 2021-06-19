@@ -2,7 +2,7 @@ SOURCE: SYNTHIA
 TARGET: Cityscapes
 DATA_DIRECTORY_SOURCE: ../../../../datasets/Synthia/RAND_CITYSCAPES
 DATA_DIRECTORY_TARGET: ../../data/Cityscapes
-EXP_NAME: SYNTHIA2Cityscapes_DeepLabv2_DADA_Contrastive
+EXP_NAME: SYNTHIA2Cityscapes_DeepLabv2_DADA_Contrastive_Visualise
 NUM_WORKERS: 4
 USE_DEPTH: False
 TRAIN:

@@ -1,5 +1,10 @@
 #Added by Qas 
 /data
+dada/scripts/baseline_log
+dada/scripts/log
+dada/scripts/lowlambda_log/
+/experiments
+/pretrained_models
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

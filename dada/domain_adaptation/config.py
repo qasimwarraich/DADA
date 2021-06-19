@@ -36,7 +36,7 @@ cfg.NUM_CLASSES = 16
 cfg.USE_DEPTH = True
 cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
-cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Lfass2"
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Contrastive_Visualise"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
