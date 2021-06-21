@@ -23,7 +23,7 @@ from advent.utils.func import adjust_learning_rate
 from advent.utils.func import loss_calc
 
 from dada.utils.viz_segmask import colorize_mask
-from dada.domain_adaptation.contrastive_learning import calc_contrastive_loss
+from dada.domain_adaptation.contrastive_learning import calc_lfass_contrastive_loss, calc_lcass_contrastive_loss
 
 
 def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
@@ -81,19 +81,19 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         # train on source
         _, batch = trainloader_iter.__next__()
         images_source, labels, _, _, _ = batch
-        _, pred_src_main, _, last_feature_map_src = model(images_source.cuda(device))
+        _, pred_src_main, _, last_feature_map_src_non_fused, last_feature_map_src = model(images_source.cuda(device))
         pred_src_main_interp = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main_interp, labels, device)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
-        _, pred_trg_main, _, last_feature_map_trg = model(images.cuda(device))
+        _, pred_trg_main, _, last_feature_map_trg_non_fused, last_feature_map_trg = model(images.cuda(device))
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
         _, dimF, dimX, dimY = last_feature_map_src.shape
-        lfass = calc_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
-                                      last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
-                                      labels, lcass=False)
+        lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
+                                            last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
+                                            labels)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
