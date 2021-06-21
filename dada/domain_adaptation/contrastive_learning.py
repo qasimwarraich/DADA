@@ -100,7 +100,7 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
     interp_target = nn.Upsample(
         size=(46, 46),
         mode="bilinear",
-        align_corners=True,
+        align_corners=False,
     )
 
     dimX, dimY = dis_src_to_trg.shape
@@ -115,7 +115,7 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
         j = closest_pixels_in_trg[i].item()
         i_2 = closest_pixels_in_src[j].item()
 
-        if new_labels[i] == new_labels[i_2]:
+        if new_labels[i].item() == new_labels[i_2].item():
             pixels_with_cycle_association.append([i, j, i_2])
 
     return pixels_with_cycle_association
@@ -141,9 +141,7 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     weight = F.softmax(d, dim=1)
 
-    diag_weight = torch.diagonal(weight)
-
-    features = (1-alpha)*features + alpha*(torch.mm(weight, features) - torch.matmul(diag_weight, features))
+    features = (1-alpha)*features + alpha*(torch.mm(weight, features))
 
     return features
 
