@@ -33,7 +33,7 @@ def cosine_sim(x, y):
     assert(x.shape == y.shape)
 
     x1 = F.normalize(x, p=2, dim=1)
-    y1 = F.normalize(x, p=2, dim=1)
+    y1 = F.normalize(y, p=2, dim=1)
 
     return torch.mm(x1, y1.t())
 
@@ -209,7 +209,7 @@ def calc_label_smooth_regularization(src_feature, trg_feature):
     pass
 
 
-def calc_contrastive_loss(final_pred_src, final_pred_trg, labels, lcass=False):
+def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels):
     """
     @final_pred_src (tensor): c*n, the final prediction feature for source
     @final_pred_trg (tensor): c*n, the final prediction feature for target
@@ -217,10 +217,7 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg, labels, lcass=False):
 
 
     returns:
-        @loss (float): the association loss
-            consists of lcass and lfass
-            lcass: association loss on final prediction probabilities
-            lfass: association loss on final feature prediction
+        @loss (float): the association loss on the last feature map
     """
 
     # perform spatial aggregation on target before softmax and cycle association
@@ -230,14 +227,29 @@ def calc_contrastive_loss(final_pred_src, final_pred_trg, labels, lcass=False):
     cosine_dis = distance_function(metric='COSIM')
     loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis)
 
-    if lcass:
-        # perform softmax and get the probablities
-        final_pred_src = F.softmax(final_pred_src, dim=1)
-        final_pred_trg = F.softmax(final_pred_trg, dim=1)
-
-        kl_div_dis = distance_function(metric='KLDiv')
-        loss_cass = calc_association_loss(final_pred_src, final_pred_trg, labels, kl_div_dis)
-
-        return loss_fass, loss_cass
-
     return loss_fass
+
+
+def calc_lcass_contrastive_loss(final_pred_src, final_pred_trg, labels):
+    """
+    @final_pred_src (tensor): c*n, the final prediction feature for source
+    @final_pred_trg (tensor): c*n, the final prediction feature for target
+    @labels (tensor): the true label for source
+
+
+    returns:
+        @loss (float): the association loss on the predictions
+    """
+
+    # perform spatial aggregation on target before softmax and cycle association
+    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
+    assert(final_pred_trg.shape == final_pred_src.shape)
+
+    kl_div_dis = distance_function(metric='KLDiv')
+
+    final_pred_src = F.softmax(final_pred_src, dim=0)
+    final_pred_trg = F.softmax(final_pred_trg, dim=0)
+
+    loss_cass = calc_association_loss(final_pred_src, final_pred_trg, labels, kl_div_dis)
+
+    return loss_cass
