@@ -96,7 +96,8 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
     # the list contains all pixels which have cycle association
     # [[i, j*, i*], ....]
     pixels_with_cycle_association = []
-    mask = torch.zeros([1, 2116])
+    mask_i = torch.zeros([1, 2116])
+    mask_i_2 = torch.zeros([1, 2116])
 
     assert (dis_src_to_trg.shape == dis_trg_to_src.shape)
 
@@ -120,9 +121,10 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
 
         if new_labels[i].item() == new_labels[i_2].item() and i != i_2:
             pixels_with_cycle_association.append([i, j, i_2])
-            mask[0,i] = 1
+            mask_i[0,i] = 1
+            mask_i_2[0,i_2] = 1
 
-    return pixels_with_cycle_association, mask
+    return pixels_with_cycle_association, mask_i, mask_i_2
 
 
 def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
@@ -149,7 +151,7 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     return features
 
-def create_map(mask):
+def create_map(mask, flag=0):
     # interpolate mask vector 
     interp = nn.Upsample(
         size=(365, 365),
@@ -165,7 +167,10 @@ def create_map(mask):
     mask_map = np.squeeze(mask_np)
     fig = plt.figure()
     plt.imshow(mask_map, cmap='gray', interpolation='none')
-    fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/map.jpg")
+    if flag == 0:
+        fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/mapi.jpg")
+    elif flag == 1:
+        fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/mapi_2.jpg")
 
 def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     """
@@ -183,8 +188,9 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     d2 = dis_fn(trg_feature, src_feature)
 
     # get the pixels which have cycle association and mask vector
-    pixels_with_cycle_association, mask = get_pixels_with_cycle_association(d1, d2, labels)
-    create_map(mask)
+    pixels_with_cycle_association, mask_i, mask_i_2 = get_pixels_with_cycle_association(d1, d2, labels)
+    create_map(mask_i)
+    create_map(mask_i_2, 1)
 
   
     # contrast normalize the distance values
