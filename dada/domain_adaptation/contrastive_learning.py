@@ -151,13 +151,14 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     return features
 
-def create_map(mask, flag=0):
+def create_map(mask, img, flag=0):
     # interpolate mask vector 
     interp = nn.Upsample(
         size=(365, 365),
         mode="bilinear",
         align_corners=True,
     )
+
     # interpolated mask 
     mask_scaled = interp(mask.view(1,1,46,46))
     mask_scaled.shape
@@ -166,13 +167,20 @@ def create_map(mask, flag=0):
     mask_np = mask_scaled.numpy()
     mask_map = np.squeeze(mask_np)
     fig = plt.figure()
-    plt.imshow(mask_map, cmap='gray', interpolation='none')
-    if flag == 0:
-        fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/mapi.jpg")
-    elif flag == 1:
-        fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/mapi_2.jpg")
+    f, ax = plt.subplots(2, sharex = True)
+    
+    # grayscaling to avoid discoloration issue
+    fizz = img[0,:,:]
+    #ax[0].imshow(np.transpose(img, (1, 2, 0)))
+    ax[0].imshow(fizz, cmap ='gray')
+    ax[1].imshow(mask_map, cmap ='gray', interpolation='none')
 
-def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
+    if flag == 0:
+        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/mapi.jpg")
+    elif flag == 1:
+        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/mapi_2.jpg")
+
+def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img):
     """
     @src_feature (tensor): c*n where c is the number of class and n is number of pixel
     @trg_feature (tensor): c*n where c is the number of class and n is number of pixel
@@ -189,8 +197,8 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
 
     # get the pixels which have cycle association and mask vector
     pixels_with_cycle_association, mask_i, mask_i_2 = get_pixels_with_cycle_association(d1, d2, labels)
-    create_map(mask_i)
-    create_map(mask_i_2, 1)
+    create_map(mask_i, img)
+    create_map(mask_i_2, img, 1)
 
   
     # contrast normalize the distance values
@@ -236,7 +244,7 @@ def calc_label_smooth_regularization(src_feature, trg_feature):
     pass
 
 
-def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels):
+def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img):
     """
     @final_pred_src (tensor): c*n, the final prediction feature for source
     @final_pred_trg (tensor): c*n, the final prediction feature for target
@@ -252,7 +260,7 @@ def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels):
     assert(final_pred_trg.shape == final_pred_src.shape)
 
     cosine_dis = distance_function(metric='COSIM')
-    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis)
+    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis, img)
 
     return loss_fass
 

@@ -87,7 +87,7 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         #Visualisation stuff
 
         #Create plot for current source image
-      #  source_image = images_source[0].numpy()
+        source_image = images_source[0].numpy()
       #  fig = plt.figure()
       #  plt.gca().add_patch(Rectangle((0,0),10,10,linewidth=2,edgecolor='r',facecolor='none'))
       #  plt.imshow(np.transpose(source_image,(1,2,0)))
@@ -106,7 +106,7 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         _, dimF, dimX, dimY = last_feature_map_src.shape
         lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
                                             last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
-                                            labels)
+                                            labels, source_image)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
