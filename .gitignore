@@ -2,6 +2,7 @@
 /data
 dada/scripts/baseline_log
 dada/scripts/log
+dada/scripts/img
 dada/scripts/lowlambda_log/
 /experiments
 /pretrained_models
