@@ -151,7 +151,7 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     return features
 
-def create_map(mask, img, flag=0):
+def create_map(mask, img, i_iter, flag=0):
     # interpolate mask vector 
     interp = nn.Upsample(
         size=(365, 365),
@@ -167,7 +167,7 @@ def create_map(mask, img, flag=0):
     mask_np = mask_scaled.numpy()
     mask_map = np.squeeze(mask_np)
     fig = plt.figure()
-    f, ax = plt.subplots(2, sharex = True)
+    f, ax = plt.subplots(1,2)
     
     # grayscaling to avoid discoloration issue
     fizz = img[0,:,:]
@@ -176,11 +176,11 @@ def create_map(mask, img, flag=0):
     ax[1].imshow(mask_map, cmap ='gray', interpolation='none')
 
     if flag == 0:
-        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/mapi.jpg")
+        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/map_i_{}.jpg".format(i_iter))
     elif flag == 1:
-        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/mapi_2.jpg")
+        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/map_i_2_{}.jpg".format(i_iter))
 
-def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img):
+def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, i_iter):
     """
     @src_feature (tensor): c*n where c is the number of class and n is number of pixel
     @trg_feature (tensor): c*n where c is the number of class and n is number of pixel
@@ -197,8 +197,8 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img):
 
     # get the pixels which have cycle association and mask vector
     pixels_with_cycle_association, mask_i, mask_i_2 = get_pixels_with_cycle_association(d1, d2, labels)
-    create_map(mask_i, img)
-    create_map(mask_i_2, img, 1)
+    create_map(mask_i, img, i_iter)
+    create_map(mask_i_2, img, i_iter,  1)
 
   
     # contrast normalize the distance values
@@ -244,7 +244,7 @@ def calc_label_smooth_regularization(src_feature, trg_feature):
     pass
 
 
-def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img):
+def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img, i_iter):
     """
     @final_pred_src (tensor): c*n, the final prediction feature for source
     @final_pred_trg (tensor): c*n, the final prediction feature for target
@@ -260,7 +260,7 @@ def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img):
     assert(final_pred_trg.shape == final_pred_src.shape)
 
     cosine_dis = distance_function(metric='COSIM')
-    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis, img)
+    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis, img, i_iter)
 
     return loss_fass
 

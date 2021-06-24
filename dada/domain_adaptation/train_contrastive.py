@@ -106,7 +106,7 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         _, dimF, dimX, dimY = last_feature_map_src.shape
         lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
                                             last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
-                                            labels, source_image)
+                                            labels, source_image, i_iter)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
