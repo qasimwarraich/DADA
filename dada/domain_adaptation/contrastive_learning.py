@@ -151,7 +151,9 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     return features
 
-def create_map(mask, img, i_iter, flag=0):
+
+def create_mask(mask):
+
     # interpolate mask vector 
     interp = nn.Upsample(
         size=(365, 365),
@@ -166,31 +168,40 @@ def create_map(mask, img, i_iter, flag=0):
     # turn mask into np array 
     mask_np = mask_scaled.numpy()
     mask_map = np.squeeze(mask_np)
-    fig = plt.figure()
-    f, ax = plt.subplots(1,2)
+
 
     # Create another plotting mask
     masked = np.ma.masked_where(mask_map == 0, mask_map)
+    return masked
 
+def create_map(maski, maski_2, img, i_iter, flag=0):
     
-    # grayscaling to avoid discoloration issue
-    fizz = img[0,:,:]
-    #ax[0].imshow(np.transpose(img, (1, 2, 0)))
-    ax[0].imshow(fizz, cmap ='gray')
-    ax[0].set_xlabel("original image")
+    masked_i = create_mask(maski)
+    masked_i_2 = create_mask(maski_2)
 
-    ax[1].imshow(fizz, cmap ='gray')
-    ax[1].imshow(masked, interpolation='none')
+    fig = plt.figure()
+    f, ax = plt.subplots(2,2)
+    
+    # Grayscaling original to avoid discoloration issue
+    img_gray = img[0,:,:]
 
-    if flag == 0:
-        ax[1].set_xlabel("original + i pixels")
-    elif flag == 1:
-        ax[1].set_xlabel("original + i* pixels")
+    # Source + i 
+    ax[0,0].imshow(img_gray, cmap ='gray')
+    ax[0,0].set_ylabel("original image")
 
-    if flag == 0:
-        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/map_i_{}.jpg".format(i_iter))
-    elif flag == 1:
-        f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i_2/map_i_2_{}.jpg".format(i_iter))
+    ax[0,1].imshow(img_gray, cmap ='gray')
+    ax[0,1].imshow(masked_i, interpolation='none')
+    ax[0,1].set_ylabel("original image + i pixels")
+
+    # Source + i_2 
+    ax[1,0].imshow(img_gray, cmap ='gray')
+    ax[1,0].set_ylabel("original image")
+
+    ax[1,1].imshow(img_gray, cmap ='gray')
+    ax[1,1].imshow(masked_i_2, interpolation='none')
+    ax[1,1].set_ylabel("original image + i* pixels")
+    
+    f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/map_source_{}.jpg".format(i_iter))
 
 def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, i_iter):
     """
@@ -209,8 +220,7 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, i_iter)
 
     # get the pixels which have cycle association and mask vector
     pixels_with_cycle_association, mask_i, mask_i_2 = get_pixels_with_cycle_association(d1, d2, labels)
-    create_map(mask_i, img, i_iter)
-    create_map(mask_i_2, img, i_iter,  1)
+    create_map(mask_i, mask_i_2, img, i_iter)
 
   
     # contrast normalize the distance values
