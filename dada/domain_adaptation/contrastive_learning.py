@@ -168,12 +168,24 @@ def create_map(mask, img, i_iter, flag=0):
     mask_map = np.squeeze(mask_np)
     fig = plt.figure()
     f, ax = plt.subplots(1,2)
+
+    # Create another plotting mask
+    masked = np.ma.masked_where(mask_map == 0, mask_map)
+
     
     # grayscaling to avoid discoloration issue
     fizz = img[0,:,:]
     #ax[0].imshow(np.transpose(img, (1, 2, 0)))
     ax[0].imshow(fizz, cmap ='gray')
-    ax[1].imshow(mask_map, cmap ='gray', interpolation='none')
+    ax[0].set_xlabel("original image")
+
+    ax[1].imshow(fizz, cmap ='gray')
+    ax[1].imshow(masked, interpolation='none')
+
+    if flag == 0:
+        ax[1].set_xlabel("original + i pixels")
+    elif flag == 1:
+        ax[1].set_xlabel("original + i* pixels")
 
     if flag == 0:
         f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/i/map_i_{}.jpg".format(i_iter))
