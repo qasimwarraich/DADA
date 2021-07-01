@@ -141,6 +141,10 @@ def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
 
     weight = F.softmax(d, dim=1)
 
+    weight_diag = torch.diag(weight).unsqueeze(dim=1)
+
+    feature_diag = torch.diag(features).unsqueeze(dim=0)
+
     features = (1-alpha)*features + alpha*(torch.mm(weight, features))
 
     return features
@@ -245,8 +249,8 @@ def calc_lcass_contrastive_loss(final_pred_src, final_pred_trg, labels):
 
     kl_div_dis = distance_function(metric='KLDiv')
 
-    final_pred_src = F.softmax(final_pred_src, dim=0)
-    final_pred_trg = F.softmax(final_pred_trg, dim=0)
+    final_pred_src = F.softmax(final_pred_src, dim=1)
+    final_pred_trg = F.softmax(final_pred_trg, dim=1)
 
     loss_cass = calc_association_loss(final_pred_src, final_pred_trg, labels, kl_div_dis)
 

@@ -49,7 +49,7 @@ class ResNetMultiDepth(ResNetMulti):
         x4_dec = self.dec4(x4_enc)
         x4_dec = self.relu(x4_dec)
         x5 = x4 * x4_dec  # feat-fusion
-        seg_conv5 = self.layer6(x5)  # produce segmap 2
+        seg_conv5 = self.layer6(x4)  # produce segmap 2
         return seg_conv4, seg_conv5, depth, x4, x5
 
     def get_10x_lr_params(self):

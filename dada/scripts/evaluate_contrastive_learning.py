@@ -55,9 +55,6 @@ def eval_single(cfg, models,
             for model, model_weight in zip(models, cfg.TEST.MODEL_WEIGHT):
                 pred_main = model(image.cuda(device))[1]
                 batch, dimF, dimX, dimY = pred_main.shape
-                pred_main = pred_main.reshape((dimF, dimX * dimY))
-                pred_main = spatial_aggregation(pred_main)
-                pred_main = pred_main.reshape((batch, dimF, dimX, dimY))
                 output_ = interp(pred_main).cpu().data[0].numpy()
                 if output is None:
                     output = model_weight * output_

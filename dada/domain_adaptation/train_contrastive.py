@@ -91,8 +91,8 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
         _, dimF, dimX, dimY = last_feature_map_src.shape
-        lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
-                                            last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
+        lfass = calc_lfass_contrastive_loss(last_feature_map_src_non_fused.reshape((dimF, dimX*dimY)).t(),
+                                            last_feature_map_trg_non_fused.reshape(dimF, dimX*dimY).t(),
                                             labels)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main

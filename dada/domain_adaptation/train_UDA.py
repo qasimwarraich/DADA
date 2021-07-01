@@ -180,6 +180,7 @@ def draw_in_tensorboard(writer, images, i_iter, pred_main, num_classes, type_):
                            range=(0, 255))
     writer.add_image(f"Prediction - {type_}", grid_image, i_iter)
 
+
 def train_domain_adaptation_with_depth(model, trainloader, targetloader, cfg):
     assert cfg.TRAIN.DA_METHOD in {"DADA"}, "Not yet supported DA method {}".format(cfg.TRAIN.DA_METHOD)
     train_dada(model, trainloader, targetloader, cfg)
