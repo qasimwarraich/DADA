@@ -36,7 +36,7 @@ cfg.NUM_CLASSES = 16
 cfg.USE_DEPTH = True
 cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
-cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_DADA_Lfass_fused_feature_map"
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_baseline"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
@@ -56,7 +56,7 @@ cfg.TRAIN.INPUT_SIZE_TARGET = (730, 730)
 cfg.TRAIN.INFO_SOURCE = ""
 cfg.TRAIN.INFO_TARGET = str(project_root / "dada/dataset/cityscapes_list/info16class.json")
 # Segmentation network params
-cfg.TRAIN.MODEL = "DeepLabv2_depth"
+cfg.TRAIN.MODEL = "DeepLabv2"
 cfg.TRAIN.MULTI_LEVEL = False  # in DADA paper we turn off this feature
 cfg.TRAIN.RESTORE_FROM = ""
 cfg.TRAIN.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)
@@ -90,7 +90,7 @@ cfg.TRAIN.TENSORBOARD_VIZRATE = 10
 cfg.TEST = EasyDict()
 cfg.TEST.MODE = "best"  # {'single', 'best'}
 # model
-cfg.TEST.MODEL = ("DeepLabv2_depth",)
+cfg.TEST.MODEL = ("DeepLabv2",)
 cfg.TEST.MODEL_WEIGHT = (1.0,)
 cfg.TEST.MULTI_LEVEL = (False,)
 cfg.TEST.IMG_MEAN = np.array((104.00698793, 116.66876762, 122.67891434), dtype=np.float32)

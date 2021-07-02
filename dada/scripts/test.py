@@ -11,7 +11,7 @@ import warnings
 
 from torch.utils import data
 
-from advent.domain_adaptation.eval_UDA import evaluate_domain_adaptation
+from dada.domain_adaptation.eval_UDA import evaluate_domain_adaptation
 from advent.scripts.test import get_arguments
 from advent.model.deeplabv2 import get_deeplab_v2
 from advent.dataset.cityscapes import CityscapesDataSet

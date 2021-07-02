@@ -27,6 +27,7 @@ from dada.model.deeplabv2_depth import get_deeplab_v2_depth
 from dada.domain_adaptation.config import cfg, cfg_from_file
 from dada.domain_adaptation.train_UDA import train_domain_adaptation_with_depth
 from dada.domain_adaptation.train_contrastive import train_domain_adaptation_with_contrastive_loss
+from dada.domain_adaptation.train_baseline import train_baseline_model
 
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore")
@@ -180,7 +181,7 @@ def main():
     elif cfg.USE_DEPTH:
         train_domain_adaptation_with_depth(model, source_loader, target_loader, cfg)
     else:
-        train_domain_adaptation(model, source_loader, target_loader, cfg)
+        train_baseline_model(model, source_loader, target_loader, cfg)
 
 
 if __name__ == "__main__":
