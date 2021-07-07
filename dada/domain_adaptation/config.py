@@ -33,10 +33,10 @@ cfg.DATA_DIRECTORY_SOURCE = str(project_root / "data/SYNTHIA")
 cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 # Number of object classes
 cfg.NUM_CLASSES = 16
-cfg.USE_DEPTH = True
-cfg.CONTRASTIVE_LEARNING = True
+cfg.USE_DEPTH = False
+cfg.CONTRASTIVE_LEARNING = False
 # Exp dirs
-cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_baseline"
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_baseline_lovasz"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")
@@ -65,6 +65,7 @@ cfg.TRAIN.MOMENTUM = 0.9
 cfg.TRAIN.WEIGHT_DECAY = 0.0005
 cfg.TRAIN.POWER = 0.9
 cfg.TRAIN.LAMBDA_SEG_MAIN = 1.0
+cfg.TRAIN.LAMBDA_LOVASZ = 0.75
 cfg.TRAIN.LAMBDA_SEG_AUX = 0.1  # weight of conv4 prediction. Used in multi-level setting.
 cfg.TRAIN.LAMBDA_DEPTH_MAIN = 0.001  # weight of depth regression
 cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN = 0.1  # weight of contrastive loss

@@ -23,7 +23,7 @@ from advent.utils.func import adjust_learning_rate
 from advent.utils.func import loss_calc
 
 from dada.utils.viz_segmask import colorize_mask
-from dada.domain_adaptation.contrastive_learning import calc_lfass_contrastive_loss, calc_lcass_contrastive_loss
+import dada.domain_adaptation.lovasz_losses as L
 
 
 def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
@@ -84,18 +84,20 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
         _, pred_src_main = model(images_source.cuda(device))
         pred_src_main = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main, labels, device)
+        loss_lovasz = L.lovasz_softmax(F.softmax(pred_src_main, dim=1).cpu(), labels.cpu(), ignore=255)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
         _, pred_trg_main = model(images.cuda(device))
 
-        loss = cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
+        loss = cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main + cfg.TRAIN.LAMBDA_LOVASZ * loss_lovasz
         loss.backward()
 
         optimizer.step()
 
         current_losses = {
-            "loss_seg_src_main": loss_seg_src_main
+            "loss_seg_src_main": loss_seg_src_main,
+            "loss_lovasz": loss_lovasz
         }
         print_losses(current_losses, i_iter)
 

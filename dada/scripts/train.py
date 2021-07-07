@@ -19,7 +19,6 @@ from torch.utils import data
 from advent.scripts.train import get_arguments
 from advent.dataset.cityscapes import CityscapesDataSet
 from advent.model.deeplabv2 import get_deeplab_v2
-from advent.domain_adaptation.train_UDA import train_domain_adaptation
 
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.dataset.synthia import SYNTHIADataSetDepth
