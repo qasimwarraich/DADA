@@ -98,6 +98,7 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
     pixels_with_cycle_association = []
     mask_i = torch.zeros([1, 2116])
     mask_i_2 = torch.zeros([1, 2116])
+    mask_j = torch.zeros([1, 2116])
 
     assert (dis_src_to_trg.shape == dis_trg_to_src.shape)
 
@@ -123,8 +124,9 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
             pixels_with_cycle_association.append([i, j, i_2])
             mask_i[0,i] = 1
             mask_i_2[0,i_2] = 1
+            mask_j[0,j] = 1
 
-    return pixels_with_cycle_association, mask_i, mask_i_2
+    return pixels_with_cycle_association, mask_i, mask_i_2, mask_j
 
 
 def spatial_aggregation(features, alpha=0.5, metric='COSIM'):
@@ -174,16 +176,19 @@ def create_mask(mask):
     masked = np.ma.masked_where(mask_map == 0, mask_map)
     return masked
 
-def create_map(maski, maski_2, img, i_iter, flag=0):
+def create_map(maski, maski_2, mask_j, img, img_trg, i_iter, flag=0):
     
     masked_i = create_mask(maski)
     masked_i_2 = create_mask(maski_2)
+    masked_j = create_mask(mask_j)
 
     fig = plt.figure()
-    f, ax = plt.subplots(2,2)
+    plt.rcParams.update({'font.size':10})
+    f, ax = plt.subplots(3,2, figsize=(15,15))
     
     # Grayscaling original to avoid discoloration issue
     img_gray = img[0,:,:]
+    img_trg_gray = img_trg[0,:,:]
 
     # Source + i 
     ax[0,0].imshow(img_gray, cmap ='gray')
@@ -200,10 +205,19 @@ def create_map(maski, maski_2, img, i_iter, flag=0):
     ax[1,1].imshow(img_gray, cmap ='gray')
     ax[1,1].imshow(masked_i_2, interpolation='none')
     ax[1,1].set_ylabel("original image + i* pixels")
-    
-    f.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/maps/map_source_{}.jpg".format(i_iter))
 
-def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, i_iter):
+    # Target + j 
+    
+    ax[2,0].imshow(img_trg_gray, cmap ='gray')
+    ax[2,0].set_ylabel("original target image")
+
+    ax[2,1].imshow(img_trg_gray, cmap ='gray')
+    ax[2,1].imshow(masked_j, interpolation='none')
+    ax[2,1].set_ylabel("original target image + j pixels")
+    
+    f.savefig("./img/maps/map_source_{}.jpg".format(i_iter))
+
+def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, img_trg, i_iter):
     """
     @src_feature (tensor): c*n where c is the number of class and n is number of pixel
     @trg_feature (tensor): c*n where c is the number of class and n is number of pixel
@@ -219,8 +233,8 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn, img, i_iter)
     d2 = dis_fn(trg_feature, src_feature)
 
     # get the pixels which have cycle association and mask vector
-    pixels_with_cycle_association, mask_i, mask_i_2 = get_pixels_with_cycle_association(d1, d2, labels)
-    create_map(mask_i, mask_i_2, img, i_iter)
+    pixels_with_cycle_association, mask_i, mask_i_2, mask_j = get_pixels_with_cycle_association(d1, d2, labels)
+    create_map(mask_i, mask_i_2, mask_j, img, img_trg, i_iter)
 
   
     # contrast normalize the distance values
@@ -266,7 +280,7 @@ def calc_label_smooth_regularization(src_feature, trg_feature):
     pass
 
 
-def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img, i_iter):
+def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img, img_trg, i_iter):
     """
     @final_pred_src (tensor): c*n, the final prediction feature for source
     @final_pred_trg (tensor): c*n, the final prediction feature for target
@@ -282,7 +296,7 @@ def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels, img, i_i
     assert(final_pred_trg.shape == final_pred_src.shape)
 
     cosine_dis = distance_function(metric='COSIM')
-    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis, img, i_iter)
+    loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis, img, img_trg, i_iter)
 
     return loss_fass
 

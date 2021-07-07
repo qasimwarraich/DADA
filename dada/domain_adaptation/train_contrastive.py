@@ -84,16 +84,9 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         _, batch = trainloader_iter.__next__()
         images_source, labels, _, _, _ = batch
 
-        #Visualisation stuff
-
-        #Create plot for current source image
+        # Create representation of source image
         source_image = images_source[0].numpy()
-      #  fig = plt.figure()
-      #  plt.gca().add_patch(Rectangle((0,0),10,10,linewidth=2,edgecolor='r',facecolor='none'))
-      #  plt.imshow(np.transpose(source_image,(1,2,0)))
-      #  fig.savefig("/srv/beegfs02/scratch/uda_mtl/data/code/DADA/dada/scripts/img/image{}.jpg".format(i_iter))
-
-
+ 
         _, pred_src_main, _, last_feature_map_src_non_fused, last_feature_map_src = model(images_source.cuda(device))
         pred_src_main_interp = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main_interp, labels, device)
@@ -103,10 +96,13 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         _, pred_trg_main, _, last_feature_map_trg_non_fused, last_feature_map_trg = model(images.cuda(device))
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
+        # Create representation of target image
+        target_image = images[0].numpy()
+
         _, dimF, dimX, dimY = last_feature_map_src.shape
         lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
                                             last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
-                                            labels, source_image, i_iter)
+                                            labels, source_image, target_image, i_iter)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
