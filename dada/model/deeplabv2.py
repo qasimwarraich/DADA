@@ -125,8 +125,8 @@ class ResNetMulti(nn.Module):
         else:
             x1 = None
         x2 = self.layer4(x)
-        x2 = self.layer6(x2)  # produce segmap 2
-        return x1, x2
+        x3 = self.layer6(x2)  # produce segmap 2
+        return x1, x3, x2
 
     def get_1x_lr_params_no_scale(self):
         """
