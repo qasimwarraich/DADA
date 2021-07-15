@@ -1,8 +1,6 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch import linalg as LA
-import time
 
 
 def kl_div(p1, p2, dim=2):
@@ -74,11 +72,12 @@ def contrast_normalization_factors(dis):
     return mean, std
 
 
-def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
+def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels, threshold=None, cls=None):
     """
     @dis_src_to_trg (tensor): n * n, distance between every pair of pixel from source to target
     @dis_trg_to_src (tensor): n * n, distance between every pair of pixel from target to source
     @label (tensor): the true class labels for source pixels
+    @cls (integer): only return associations belonging to this class, useful in visualization
 
     find pixels that have cycle associations between them. by default uses distance
     metric as cosine similarity
@@ -98,14 +97,13 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
     assert (dis_src_to_trg.shape == dis_trg_to_src.shape)
 
     interp_target = nn.Upsample(
-        size=(46, 46),
-        mode="bilinear",
-        align_corners=False,
+        size=(92, 92),
+        mode="nearest"
     )
 
     dimX, dimY = dis_src_to_trg.shape
 
-    new_labels = interp_target(labels.view(1, 1, 365, 365))
+    new_labels = interp_target(labels.view(1, 1, 730, 730))
     new_labels = new_labels.reshape(dimX)
 
     closest_pixels_in_trg = torch.argmax(dis_src_to_trg, dim=1)
@@ -115,7 +113,12 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels):
         j = closest_pixels_in_trg[i].item()
         i_2 = closest_pixels_in_src[j].item()
 
+        if threshold is not None and not (dis_src_to_trg[i, j].item() > threshold):
+            continue
+
         if new_labels[i].item() == new_labels[i_2].item():
+            if cls is not None and not (new_labels[i].item() == cls):
+                continue
             pixels_with_cycle_association.append([i, j, i_2])
 
     return pixels_with_cycle_association
@@ -162,12 +165,11 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     """
 
     # calculate the pixel wise distance
-    d1 = dis_fn(src_feature, trg_feature)
-    d2 = dis_fn(trg_feature, src_feature)
+    d1 = dis_fn(src_feature, trg_feature).cpu()
+    d2 = dis_fn(trg_feature, src_feature).cpu()
 
     # get the pixels which have cycle association
     pixels_with_cycle_association = get_pixels_with_cycle_association(d1, d2, labels)
-
     # contrast normalize the distance values
     u, sig = contrast_normalization_factors(d1)
     u2, sig2 = contrast_normalization_factors(d2)
@@ -175,8 +177,8 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     d1 = (d1 - u) / sig
     d2 = (d2 - u2) / sig2
 
-    d1softmax = F.softmax(d1, dim=1)
-    d2softmax = F.softmax(d2, dim=1)
+    d1 = F.softmax(d1, dim=1)
+    d2 = F.softmax(d2, dim=1)
 
     I = []
     J = []
@@ -188,18 +190,11 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
         J.append(j)
         I_2.append(i_2)
 
-    loss = torch.sum(torch.log(d1softmax[I, J] * d2softmax[J, I_2]))
+    loss = torch.sum(torch.log(d1[I, J] * d2[J, I_2]))
 
     loss *= -1 / abs(len(pixels_with_cycle_association))
 
     return loss
-
-
-def calc_lovasz_softmax_loss(src_feature, trg_feature):
-    """
-    **TODO**
-    """
-    pass
 
 
 def calc_label_smooth_regularization(src_feature, trg_feature):
@@ -223,7 +218,7 @@ def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels):
     """
 
     # perform spatial aggregation on target before softmax and cycle association
-    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
+    # final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
     assert(final_pred_trg.shape == final_pred_src.shape)
 
     cosine_dis = distance_function(metric='COSIM')

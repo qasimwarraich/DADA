@@ -6,6 +6,7 @@
 # --------------------------------------------------------
 import os
 import sys
+import gc
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,7 @@ from advent.utils.func import loss_calc
 
 from dada.utils.viz_segmask import colorize_mask
 from dada.domain_adaptation.contrastive_learning import calc_lfass_contrastive_loss, calc_lcass_contrastive_loss
+import dada.domain_adaptation.lovasz_losses as L
 
 
 def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
@@ -64,7 +66,6 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
     #     mode="bilinear",
     #     align_corners=True,
     # )
-    torch.autograd.set_detect_anomaly(True)
     trainloader_iter = enumerate(trainloader)
     targetloader_iter = enumerate(targetloader)
 
@@ -80,22 +81,26 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         # UDA Training
         # train on source
         _, batch = trainloader_iter.__next__()
-        images_source, labels, _, _, _ = batch
-        _, pred_src_main, _, last_feature_map_src_non_fused, last_feature_map_src = model(images_source.cuda(device))
-        pred_src_main_interp = interp(pred_src_main)
-        loss_seg_src_main = loss_calc(pred_src_main_interp, labels, device)
+        images_source, labels, _, _ = batch
+        _, pred_src_main, last_feature_map_src = model(images_source.cuda(device))
+        pred_src_main = interp(pred_src_main)
+        loss_seg_src_main = loss_calc(pred_src_main, labels, device)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
-        _, pred_trg_main, _, last_feature_map_trg_non_fused, last_feature_map_trg = model(images.cuda(device))
+        _, pred_trg_main, last_feature_map_trg = model(images.cuda(device))
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
         _, dimF, dimX, dimY = last_feature_map_src.shape
-        lfass = calc_lfass_contrastive_loss(last_feature_map_src_non_fused.reshape((dimF, dimX*dimY)).t(),
-                                            last_feature_map_trg_non_fused.reshape(dimF, dimX*dimY).t(),
+        lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
+                                            last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
                                             labels)
 
+        loss_lovasz = L.lovasz_softmax(F.softmax(pred_src_main, dim=1), labels, ignore=255)
+        # loss_lovasz = lovasz(F.softmax(pred_src_main, dim=1), labels)
+
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
+                + cfg.TRAIN.LAMBDA_LOVASZ * loss_lovasz
                 + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
         loss.backward()
 
@@ -103,6 +108,7 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
 
         current_losses = {
             "loss_seg_src_main": loss_seg_src_main,
+            "lovasz_loss": loss_lovasz,
             "loss_lfass_src_main": lfass
         }
         print_losses(current_losses, i_iter)
@@ -125,6 +131,13 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
                 draw_in_tensorboard(
                     writer, images_source, i_iter, pred_src_main, num_classes, "S"
                 )
+        del pred_src_main
+        del pred_trg_main
+        del batch
+        del last_feature_map_trg
+        del last_feature_map_src
+        gc.collect()
+        torch.cuda.empty_cache()
 
 
 def draw_in_tensorboard(writer, images, i_iter, pred_main, num_classes, type_):

@@ -1,4 +1,5 @@
 import torch.nn as nn
+from dada.domain_adaptation.contrastive_learning import spatial_aggregation
 
 affine_par = True
 
@@ -66,7 +67,8 @@ class ClassifierModule(nn.Module):
 
 
 class ResNetMulti(nn.Module):
-    def __init__(self, block, layers, num_classes, multi_level):
+    def __init__(self, block, layers, num_classes, multi_level, inference):
+        self.inference = inference
         self.multi_level = multi_level
         self.inplanes = 64
         super(ResNetMulti, self).__init__()
@@ -125,6 +127,12 @@ class ResNetMulti(nn.Module):
         else:
             x1 = None
         x2 = self.layer4(x)
+
+        if self.inference:
+            batch, dimF, dimX, dimY = x2.shape
+            x2 = spatial_aggregation(x2.reshape((dimF, dimX*dimY)).t())
+            x2 = x2.reshape((batch, dimF, dimX, dimY))
+
         x3 = self.layer6(x2)  # produce segmap 2
         return x1, x3, x2
 
@@ -171,6 +179,6 @@ class ResNetMulti(nn.Module):
                 {'params': self.get_10x_lr_params(), 'lr': 10 * lr}]
 
 
-def get_deeplab_v2(num_classes=19, multi_level=True):
-    model = ResNetMulti(Bottleneck, [3, 4, 23, 3], num_classes, multi_level)
+def get_deeplab_v2(num_classes=19, multi_level=True, test_mode=False):
+    model = ResNetMulti(Bottleneck, [3, 4, 23, 3], num_classes, multi_level, test_mode)
     return model

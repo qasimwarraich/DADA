@@ -18,7 +18,7 @@ from torch.utils import data
 
 from advent.scripts.train import get_arguments
 from advent.dataset.cityscapes import CityscapesDataSet
-from advent.model.deeplabv2 import get_deeplab_v2
+from dada.model.deeplabv2 import get_deeplab_v2
 
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.dataset.synthia import SYNTHIADataSetDepth
@@ -96,6 +96,8 @@ def main():
                 if not i_parts[1] == "layer5":
                     new_params[".".join(i_parts[1:])] = saved_state_dict[i]
             model.load_state_dict(new_params)
+        elif "synthia2cityscapes_dada" in cfg.TRAIN.RESTORE_FROM:
+            model.load_state_dict(saved_state_dict)
         else:
             start_iter = saved_state_dict['iter']
             model.load_state_dict(saved_state_dict['state_dict'])
@@ -111,6 +113,12 @@ def main():
                 i_parts = i.split(".")
                 if not i_parts[1] == "layer5":
                     new_params[".".join(i_parts[1:])] = saved_state_dict[i]
+            model.load_state_dict(new_params)
+        elif "synthia2cityscapes_dada" in cfg.TRAIN.RESTORE_FROM:
+            new_params = saved_state_dict.copy()
+            for k, v in saved_state_dict.items():
+                if k.startswith('enc4') or k.startswith('dec4'):
+                    new_params.pop(k)
             model.load_state_dict(new_params)
         else:
             start_iter = saved_state_dict['iter']

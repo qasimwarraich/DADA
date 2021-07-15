@@ -34,9 +34,9 @@ cfg.DATA_DIRECTORY_TARGET = str(project_root / "data/Cityscapes")
 # Number of object classes
 cfg.NUM_CLASSES = 16
 cfg.USE_DEPTH = False
-cfg.CONTRASTIVE_LEARNING = False
+cfg.CONTRASTIVE_LEARNING = True
 # Exp dirs
-cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_baseline_lovasz"
+cfg.EXP_NAME = "SYNTHIA2Cityscapes_DeepLabv2_lfass"
 cfg.EXP_ROOT = project_root / "experiments"
 cfg.EXP_ROOT_SNAPSHOT = osp.join(cfg.EXP_ROOT, "snapshots")
 cfg.EXP_ROOT_LOGS = osp.join(cfg.EXP_ROOT, "logs")

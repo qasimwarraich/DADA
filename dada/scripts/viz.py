@@ -10,18 +10,18 @@ from dada.domain_adaptation.config import cfg, cfg_from_file
 from dada.model.deeplabv2 import get_deeplab_v2
 from dada.domain_adaptation.contrastive_learning import distance_function
 from dada.domain_adaptation.contrastive_learning import get_pixels_with_cycle_association
+import matplotlib.pyplot as plt
 
 
 def create_mask(mask):
     # interpolate mask vector
     interp = nn.Upsample(
-        size=(365, 365),
-        mode="bilinear",
-        align_corners=True,
+        size=(730, 730),
+        mode="nearest",
     )
 
     # interpolated mask
-    mask_scaled = interp(mask.view(1, 1, 46, 46))
+    mask_scaled = interp(mask.view(1, 1, 92, 92))
     mask_scaled.shape
 
     # turn mask into np array
@@ -124,6 +124,7 @@ def visualize_pixel_cycle_associations(model_path):
         num_classes=cfg.NUM_CLASSES,
         multi_level=cfg.TRAIN.MULTI_LEVEL
     )
+    model.to(device)
     saved_state_dict = torch.load(model_path)
 
     start_iter = saved_state_dict['iter']
@@ -132,34 +133,52 @@ def visualize_pixel_cycle_associations(model_path):
     trainloader_iter = enumerate(source_loader)
     targetloader_iter = enumerate(target_loader)
 
-    _, batch = trainloader_iter.__next__()
-    images_source, labels, _, _ = batch
-    _, pred_src_main = model(images_source.cuda(device))
+    max_iter = 10
+    cls=2
 
-    _, batch = targetloader_iter.__next__()
-    images, _, _, _ = batch
-    _, pred_trg_main = model(images.cuda(device))
+    for iter in range(max_iter):
+        _, batch = trainloader_iter.__next__()
+        images_source, labels, _, _ = batch
+        _, pred_src_main, last_feature_map_src = model(images_source.cuda(device))
 
-    dis_fn = distance_function(metric='COSIM')
+        _, batch = targetloader_iter.__next__()
+        images, _, _, _ = batch
+        _, pred_trg_main, last_feature_map_trg = model(images.cuda(device))
 
-    d1 = dis_fn(pred_src_main, pred_trg_main)
-    d2 = dis_fn(pred_trg_main, pred_src_main)
+        dis_fn = distance_function(metric='COSIM')
 
-    # get the pixels which have cycle association and mask vector
-    pixels_with_cycle_association, mask_i, mask_i_2, mask_j = get_pixels_with_cycle_association(d1, d2, labels)
+        _, dimF, dimX, dimY = last_feature_map_src.shape
 
-    mask_i = torch.zeros([1, 2116])
-    mask_i2 = torch.zeros([1, 2116])
-    mask_j = torch.zeros([1, 2116])
+        d1 = dis_fn(last_feature_map_src.reshape((dimF, dimX*dimY)).t(), last_feature_map_trg.reshape((dimF, dimX*dimY)).t())
+        d2 = dis_fn(last_feature_map_trg.reshape((dimF, dimX*dimY)).t(), last_feature_map_src.reshape((dimF, dimX*dimY)).t())
 
-    for association in pixels_with_cycle_association:
-        i, j, i2 = association
-        mask_i[0, i] = 1
-        mask_i2[0, i2] = 1
-        mask_j[0, j] = 1
+        # get the pixels which have cycle association and mask vector
+        pixels_with_cycle_association = get_pixels_with_cycle_association(d1, d2, labels, cls=cls)
+        print(len(pixels_with_cycle_association))
+        mask_i = torch.zeros([1, 8464])
+        mask_i2 = torch.zeros([1, 8464])
+        mask_j = torch.zeros([1, 8464])
 
-    i = 0
-    create_map(mask_i, mask_i2, mask_j, images_source[0].numpy(), images[0].numpy(), i)
+        for association in pixels_with_cycle_association:
+            i, j, i2 = association
+            mask_i[0, i] = 1
+            mask_i2[0, i2] = 1
+            mask_j[0, j] = 1
+
+        create_map(mask_i, mask_i2, mask_j, images_source[0].numpy(), images[0].numpy(), iter)
+        del pred_src_main
+        del images_source
+        del pred_trg_main
+        del images
+        del batch
+        del last_feature_map_trg
+        del last_feature_map_src
+        del mask_i
+        del mask_i2
+        del mask_j
+        del d1
+        del d2
+        torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

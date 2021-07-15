@@ -13,7 +13,7 @@ from torch.utils import data
 
 from dada.domain_adaptation.eval_UDA import evaluate_domain_adaptation
 from advent.scripts.test import get_arguments
-from advent.model.deeplabv2 import get_deeplab_v2
+from dada.model.deeplabv2 import get_deeplab_v2
 from advent.dataset.cityscapes import CityscapesDataSet
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.domain_adaptation.config import cfg, cfg_from_file
@@ -54,7 +54,8 @@ def main(config_file, exp_suffix):
         elif cfg.TEST.MODEL[i] == "DeepLabv2":
             model = get_deeplab_v2(
                 num_classes=cfg.NUM_CLASSES,
-                multi_level=cfg.TEST.MULTI_LEVEL[i]
+                multi_level=cfg.TEST.MULTI_LEVEL[i],
+                test_mode=False
             )
         else:
             raise NotImplementedError(f"Not yet supported {cfg.TEST.MODEL[i]}")

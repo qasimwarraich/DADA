@@ -108,10 +108,6 @@ def eval_best(cfg, models,
                     interp = nn.Upsample(size=(label.shape[1], label.shape[2]), mode='bilinear', align_corners=True)
                 with torch.no_grad():
                     pred_main = models[0](image.cuda(device))[1]
-                    batch, dimF, dimX, dimY = pred_main.shape
-                    pred_main = pred_main.reshape((dimF, dimX * dimY))
-                    pred_main = spatial_aggregation(pred_main)
-                    pred_main = pred_main.reshape((batch, dimF, dimX, dimY))
                     output = interp(pred_main).cpu().data[0].numpy()
                     output = output.transpose(1, 2, 0)
                     output = np.argmax(output, axis=2)
