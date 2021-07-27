@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Added by qas
+dada/scripts/img/
+data/
+experiments/
+pretrained_models/
+
 # C extensions
 *.so
 
