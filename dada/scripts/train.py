@@ -15,14 +15,14 @@ import numpy as np
 import yaml
 import torch
 from torch.utils import data
+import torchvision.models as models
 
 from advent.scripts.train import get_arguments
 from advent.dataset.cityscapes import CityscapesDataSet
-from dada.model.deeplabv2 import get_deeplab_v2
+from dada.model.deeplabv2_resnet18 import get_deeplab_v2_resnet18
 
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.dataset.synthia import SYNTHIADataSetDepth
-from dada.model.deeplabv2_depth import get_deeplab_v2_depth
 from dada.domain_adaptation.config import cfg, cfg_from_file
 from dada.domain_adaptation.train_UDA import train_domain_adaptation_with_depth
 from dada.domain_adaptation.train_contrastive import train_domain_adaptation_with_contrastive_loss
@@ -80,49 +80,9 @@ def main():
 
     start_iter = 0
     # LOAD SEGMENTATION NET
-    assert osp.exists(
-        cfg.TRAIN.RESTORE_FROM
-    ), f"Missing init model {cfg.TRAIN.RESTORE_FROM}"
-    if cfg.TRAIN.MODEL == "DeepLabv2_depth":
-        model = get_deeplab_v2_depth(
-            num_classes=cfg.NUM_CLASSES,
-            multi_level=cfg.TRAIN.MULTI_LEVEL
-        )
-        saved_state_dict = torch.load(cfg.TRAIN.RESTORE_FROM)
-        if "DeepLab_resnet_pretrained_imagenet" in cfg.TRAIN.RESTORE_FROM:
-            new_params = model.state_dict().copy()
-            for i in saved_state_dict:
-                i_parts = i.split(".")
-                if not i_parts[1] == "layer5":
-                    new_params[".".join(i_parts[1:])] = saved_state_dict[i]
-            model.load_state_dict(new_params)
-        elif "synthia2cityscapes_dada" in cfg.TRAIN.RESTORE_FROM:
-            model.load_state_dict(saved_state_dict)
-        else:
-            start_iter = saved_state_dict['iter']
-            model.load_state_dict(saved_state_dict['state_dict'])
-    elif cfg.TRAIN.MODEL == "DeepLabv2":
-        model = get_deeplab_v2(
-            num_classes=cfg.NUM_CLASSES,
-            multi_level=cfg.TRAIN.MULTI_LEVEL
-        )
-        saved_state_dict = torch.load(cfg.TRAIN.RESTORE_FROM)
-        if "DeepLab_resnet_pretrained_imagenet" in cfg.TRAIN.RESTORE_FROM:
-            new_params = model.state_dict().copy()
-            for i in saved_state_dict:
-                i_parts = i.split(".")
-                if not i_parts[1] == "layer5":
-                    new_params[".".join(i_parts[1:])] = saved_state_dict[i]
-            model.load_state_dict(new_params)
-        elif "synthia2cityscapes_dada" in cfg.TRAIN.RESTORE_FROM:
-            new_params = saved_state_dict.copy()
-            for k, v in saved_state_dict.items():
-                if k.startswith('enc4') or k.startswith('dec4'):
-                    new_params.pop(k)
-            model.load_state_dict(new_params)
-        else:
-            start_iter = saved_state_dict['iter']
-            model.load_state_dict(saved_state_dict['state_dict'])
+    if cfg.TRAIN.MODEL == "resnet-18":
+        model = get_deeplab_v2_resnet18(num_classes=cfg.NUM_CLASSES,
+                                        pretrained=True)
     else:
         raise NotImplementedError(f"Not yet supported {cfg.TRAIN.MODEL}")
     print("Model loaded")

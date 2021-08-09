@@ -10,10 +10,12 @@ import pprint
 import warnings
 
 from torch.utils import data
+from torch import nn
 
 from dada.domain_adaptation.eval_UDA import evaluate_domain_adaptation
 from advent.scripts.test import get_arguments
 from dada.model.deeplabv2 import get_deeplab_v2
+from dada.model.deeplabv2_resnet18 import get_deeplab_v2_resnet18
 from advent.dataset.cityscapes import CityscapesDataSet
 from dada.dataset.mapillary import MapillaryDataSet
 from dada.domain_adaptation.config import cfg, cfg_from_file
@@ -57,6 +59,8 @@ def main(config_file, exp_suffix):
                 multi_level=cfg.TEST.MULTI_LEVEL[i],
                 test_mode=False
             )
+        elif cfg.TEST.MODEL[i] == "resnet-18":
+            model = get_deeplab_v2_resnet18(num_classes=cfg.NUM_CLASSES)
         else:
             raise NotImplementedError(f"Not yet supported {cfg.TEST.MODEL[i]}")
         models.append(model)

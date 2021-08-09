@@ -53,7 +53,7 @@ def eval_single(cfg, models,
         with torch.no_grad():
             output = None
             for model, model_weight in zip(models, cfg.TEST.MODEL_WEIGHT):
-                pred_main = model(image.cuda(device))[1]
+                pred_main = model(image.cuda(device))[0]
                 batch, dimF, dimX, dimY = pred_main.shape
                 output_ = interp(pred_main).cpu().data[0].numpy()
                 if output is None:

@@ -24,6 +24,7 @@ from advent.utils.func import loss_calc
 
 from dada.utils.viz_segmask import colorize_mask
 import dada.domain_adaptation.lovasz_losses as L
+from dada.sync_batchnorm import convert_model
 
 
 def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
@@ -32,17 +33,11 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
     # Create the model and start the training.
     input_size_source = cfg.TRAIN.INPUT_SIZE_SOURCE
     input_size_target = cfg.TRAIN.INPUT_SIZE_TARGET
-    device = cfg.GPU_ID
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     num_classes = cfg.NUM_CLASSES
     viz_tensorboard = os.path.exists(cfg.TRAIN.TENSORBOARD_LOGDIR)
     if viz_tensorboard:
         writer = SummaryWriter(log_dir=cfg.TRAIN.TENSORBOARD_LOGDIR)
-
-    # SEGMNETATION NETWORK
-    model.train()
-    model.to(device)
-    cudnn.benchmark = True
-    cudnn.enabled = True
 
     # OPTIMIZERS
     # segnet's optimizer
@@ -52,6 +47,15 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
         momentum=cfg.TRAIN.MOMENTUM,
         weight_decay=cfg.TRAIN.WEIGHT_DECAY,
     )
+
+    model = nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+    model = convert_model(model)
+
+    # SEGMNETATION NETWORK
+    model.train()
+    model.to(device)
+    cudnn.benchmark = True
+    cudnn.enabled = True
 
     # interpolate output segmaps
     interp = nn.Upsample(
@@ -81,14 +85,15 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
         # train on source
         _, batch = trainloader_iter.__next__()
         images_source, labels, _, _ = batch
-        _, pred_src_main = model(images_source.cuda(device))
+        pred_src_main, _ = model(images_source.to(device))
         pred_src_main = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main, labels, device)
-        loss_lovasz = L.lovasz_softmax(F.softmax(pred_src_main, dim=1).cpu(), labels.cpu(), ignore=255)
+
+        loss_lovasz = L.lovasz_softmax(F.softmax(pred_src_main, dim=1), labels, ignore=255)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
-        _, pred_trg_main = model(images.cuda(device))
+        pred_trg_main, _ = model(images.to(device))
 
         loss = cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main + cfg.TRAIN.LAMBDA_LOVASZ * loss_lovasz
         loss.backward()
@@ -105,7 +110,13 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
             print("taking snapshot ...")
             print("exp =", cfg.TRAIN.SNAPSHOT_DIR)
             snapshot_dir = Path(cfg.TRAIN.SNAPSHOT_DIR)
-            torch.save({'state_dict': model.state_dict(), 'iter': i_iter}, snapshot_dir / f"model_{i_iter}.pth")
+            try:
+                state_dict = model.module.state_dict()
+            except AttributeError:
+                state_dict = model.state_dict()
+
+            torch.save({'state_dict': state_dict, 'iter': i_iter}, snapshot_dir / f"model_{i_iter}.pth")
+
             if i_iter >= cfg.TRAIN.EARLY_STOP - 1:
                 break
         sys.stdout.flush()
@@ -124,7 +135,6 @@ def train_baseline(model, trainloader, targetloader, cfg, start_iter=0):
         del pred_trg_main
         del images
         del batch
-
         torch.cuda.empty_cache()
 
 

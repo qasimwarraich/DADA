@@ -165,8 +165,8 @@ def calc_association_loss(src_feature, trg_feature, labels, dis_fn):
     """
 
     # calculate the pixel wise distance
-    d1 = dis_fn(src_feature, trg_feature).cpu()
-    d2 = dis_fn(trg_feature, src_feature).cpu()
+    d1 = dis_fn(src_feature, trg_feature)
+    d2 = dis_fn(trg_feature, src_feature)
 
     # get the pixels which have cycle association
     pixels_with_cycle_association = get_pixels_with_cycle_association(d1, d2, labels)
@@ -216,15 +216,26 @@ def calc_lfass_contrastive_loss(final_pred_src, final_pred_trg, labels):
     returns:
         @loss (float): the association loss on the last feature map
     """
+    _, dimF, dimX, dimY = final_pred_src.shape
+    final_pred_src = final_pred_src.view((dimF, dimX * dimY)).t()
+    final_pred_trg = final_pred_trg.view((dimF, dimX * dimY)).t()
 
     # perform spatial aggregation on target before softmax and cycle association
-    # final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
+    final_pred_trg = spatial_aggregation(final_pred_trg, alpha=0.5)
     assert(final_pred_trg.shape == final_pred_src.shape)
 
     cosine_dis = distance_function(metric='COSIM')
     loss_fass = calc_association_loss(final_pred_src, final_pred_trg, labels, cosine_dis)
 
     return loss_fass
+
+
+class Lfass(nn.Module):
+    def __init__(self):
+        super(Lfass, self).__init__()
+
+    def forward(self, pred_src, pred_trg, labels):
+        return calc_lfass_contrastive_loss(pred_src, pred_trg, labels)
 
 
 def calc_lcass_contrastive_loss(final_pred_src, final_pred_trg, labels):

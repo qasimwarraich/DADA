@@ -24,8 +24,9 @@ from advent.utils.func import adjust_learning_rate
 from advent.utils.func import loss_calc
 
 from dada.utils.viz_segmask import colorize_mask
-from dada.domain_adaptation.contrastive_learning import calc_lfass_contrastive_loss, calc_lcass_contrastive_loss
+from dada.domain_adaptation.contrastive_learning import Lfass
 import dada.domain_adaptation.lovasz_losses as L
+from dada.sync_batchnorm import convert_model
 
 
 def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
@@ -40,12 +41,6 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
     if viz_tensorboard:
         writer = SummaryWriter(log_dir=cfg.TRAIN.TENSORBOARD_LOGDIR)
 
-    # SEGMNETATION NETWORK
-    model.train()
-    model.to(device)
-    cudnn.benchmark = True
-    cudnn.enabled = True
-
     # OPTIMIZERS
     # segnet's optimizer
     optimizer = optim.SGD(
@@ -54,6 +49,17 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         momentum=cfg.TRAIN.MOMENTUM,
         weight_decay=cfg.TRAIN.WEIGHT_DECAY,
     )
+
+    model = nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+    model = convert_model(model)
+
+    # SEGMNETATION NETWORK
+    model.train()
+    model.to(device)
+    cudnn.benchmark = True
+    cudnn.enabled = True
+
+    scaler = torch.cuda.amp.GradScaler()
 
     # interpolate output segmaps
     interp = nn.Upsample(
@@ -82,34 +88,37 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
         # train on source
         _, batch = trainloader_iter.__next__()
         images_source, labels, _, _ = batch
-        _, pred_src_main, last_feature_map_src = model(images_source.cuda(device))
+        pred_src_main, last_feature_map_src = model(images_source.cuda(device))
         pred_src_main = interp(pred_src_main)
         loss_seg_src_main = loss_calc(pred_src_main, labels, device)
 
         _, batch = targetloader_iter.__next__()
         images, _, _, _ = batch
-        _, pred_trg_main, last_feature_map_trg = model(images.cuda(device))
+        pred_trg_main, last_feature_map_trg = model(images.cuda(device))
         # pred_trg_main_interp = interp_target(pred_trg_main)
 
         _, dimF, dimX, dimY = last_feature_map_src.shape
-        lfass = calc_lfass_contrastive_loss(last_feature_map_src.reshape((dimF, dimX*dimY)).t(),
-                                            last_feature_map_trg.reshape(dimF, dimX*dimY).t(),
-                                            labels)
-
+        lfass = Lfass().to(device)
+        lfass = nn.DataParallel(lfass, device_ids=range(torch.cuda.device_count()))
+        loss_fass = lfass(last_feature_map_src,
+                          last_feature_map_trg,
+                          labels)
+        loss_fass = torch.mean(loss_fass)
         loss_lovasz = L.lovasz_softmax(F.softmax(pred_src_main, dim=1), labels, ignore=255)
         # loss_lovasz = lovasz(F.softmax(pred_src_main, dim=1), labels)
 
         loss = (cfg.TRAIN.LAMBDA_SEG_MAIN * loss_seg_src_main
                 + cfg.TRAIN.LAMBDA_LOVASZ * loss_lovasz
-                + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * lfass)
-        loss.backward()
+                + cfg.TRAIN.LAMBDA_CONTRASTIVE_MAIN * loss_fass)
+        scaler.scale(loss).backward()
 
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
 
         current_losses = {
             "loss_seg_src_main": loss_seg_src_main,
             "lovasz_loss": loss_lovasz,
-            "loss_lfass_src_main": lfass
+            "loss_lfass_src_main": loss_fass
         }
         print_losses(current_losses, i_iter)
 
@@ -117,7 +126,12 @@ def train_dada(model, trainloader, targetloader, cfg, start_iter=0):
             print("taking snapshot ...")
             print("exp =", cfg.TRAIN.SNAPSHOT_DIR)
             snapshot_dir = Path(cfg.TRAIN.SNAPSHOT_DIR)
-            torch.save({'state_dict': model.state_dict(), 'iter': i_iter}, snapshot_dir / f"model_{i_iter}.pth")
+            try:
+                state_dict = model.module.state_dict()
+            except AttributeError:
+                state_dict = model.state_dict()
+
+            torch.save({'state_dict': state_dict, 'iter': i_iter}, snapshot_dir / f"model_{i_iter}.pth")
             if i_iter >= cfg.TRAIN.EARLY_STOP - 1:
                 break
         sys.stdout.flush()
