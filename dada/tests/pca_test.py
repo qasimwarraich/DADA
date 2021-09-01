@@ -46,8 +46,6 @@ distance matrices:
 | d,0 | d,1 | d,2 | d,3 |
 +-----+-----+-----+-----+
 
-
-TODO: PLOT THE ASSOCIATION
 """
 
 
