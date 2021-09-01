@@ -116,7 +116,7 @@ def get_pixels_with_cycle_association(dis_src_to_trg, dis_trg_to_src, labels, th
         if threshold is not None and not (dis_src_to_trg[i, j].item() > threshold):
             continue
 
-        if new_labels[i].item() == new_labels[i_2].item():
+        if new_labels[i].item() == new_labels[i_2].item() and new_labels[i].item() != 255:
             if cls is not None and not (new_labels[i].item() == cls):
                 continue
             pixels_with_cycle_association.append([i, j, i_2])
